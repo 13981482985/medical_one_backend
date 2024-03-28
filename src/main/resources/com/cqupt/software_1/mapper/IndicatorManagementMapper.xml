@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cqupt.software_1.mapper.IndicatorManagementMapper">
+
+    <select id="getIndicators" resultType="com.cqupt.software_1.entity.IndicatorManageEntity">
+        select * from indicator_management where type_ch in (
+          <foreach collection="types" item="type" separator=",">
+              #{type}
+          </foreach>
+        );
+    </select>
+    <select id="getMissRate" resultType="java.lang.Float">
+        SELECT
+            ROUND((COUNT(*) - COUNT("${featureName}"))::NUMERIC / COUNT(*)*100, 2) AS empty_ratio
+        FROM
+            "${tableName}";
+    </select>
+    <resultMap id="countResultMap" type="com.cqupt.software_1.vo.IndicatorsMissDataVo">
+        <result column="null_count" property="missingQuantity" />
+        <result column="valid_count" property="validNumber" />
+    </resultMap>
+
+    <select id="getMissDataInfo" resultMap="countResultMap">
+         SELECT count(*) - COUNT("${checkedFeat.featureName}") as null_count,
+           COUNT("${checkedFeat.featureName}") as valid_count
+         FROM "${tableName}"
+    </select>
+</mapper>

@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cqupt.software_1.mapper.TableDataMapper">
+    <insert id="insertRow">
+        INSERT INTO "${tableName}"
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <foreach collection="row" item="value">
+                #{value},
+            </foreach>
+        </trim>
+    </insert>
+<!--    <insert id="bachInsertData">-->
+<!--        insert ${tableName} values-->
+<!--        <foreach collection="diseaseData" item="rowMap" separator=",">-->
+<!--            (-->
+<!--                <foreach collection="rowMap.entrySet()" separator=",">-->
+<!--                    #{val}-->
+<!--                </foreach>-->
+<!--            )-->
+<!--        </foreach>-->
+<!--    </insert>-->
+<!--        <insert id="bachInsertData" parameterType="java.util.List">-->
+<!--                INSERT INTO ${tableName}-->
+<!--                (-->
+<!--                &lt;!&ndash; 遍历第一行的键，即列名 &ndash;&gt;-->
+<!--                <foreach collection="diseaseData[0].keySet()" item="key" index="key"  separator=",">-->
+<!--                        "${key}"-->
+<!--                </foreach>-->
+<!--                )-->
+<!--                VALUES-->
+<!--                &lt;!&ndash; 遍历数据集合，即行 &ndash;&gt;-->
+<!--                <foreach collection="diseaseData" item="rowMap" separator=",">-->
+<!--                        (-->
+<!--                        &lt;!&ndash; 遍历行中的每个列值 &ndash;&gt;-->
+<!--                        <foreach collection="rowMap.entrySet()" item="value" index="value" separator=",">-->
+<!--                                #{value}-->
+<!--                        </foreach>-->
+<!--                        )-->
+<!--                </foreach>-->
+<!--        </insert>-->
+
+        <insert id="bachInsertData" parameterType="java.util.List">
+                INSERT INTO "${tableName}"
+                (
+                <!-- 遍历第一行的键，即列名 -->
+                <foreach collection="diseaseData[0].keySet()" item="key" index="key"  separator=",">
+                        "${key}"
+                </foreach>
+                )
+                VALUES
+                <!-- 遍历数据集合，即行 -->
+                <foreach collection="diseaseData" item="rowMap" separator=",">
+                        (
+                        <!-- 遍历行中的每个列值 -->
+                        <foreach collection="diseaseData[0].keySet()" item="key" index="index" separator=",">
+                                '${rowMap[key]}'
+                        </foreach>
+                        )
+                </foreach>
+        </insert>
+
+        <update id="createTable">
+        create table "${tableName}" (
+        <foreach collection="headers" item="columnName" separator=",">
+            "${columnName}" VARCHAR(255)
+        </foreach>
+        );
+
+    </update>
+<!--    创建表头-->
+    <update id="createTableByField">
+        CREATE TABLE "${tableName}"
+        (
+                dataid character varying(255) COLLATE pg_catalog."default",
+                visitno character varying(255) COLLATE pg_catalog."default",
+                "WBC" character varying(255) COLLATE pg_catalog."default",
+                "NEUT_num" character varying(255) COLLATE pg_catalog."default",
+                "LYMPH_num" character varying(255) COLLATE pg_catalog."default",
+                "MONO_num" character varying(255) COLLATE pg_catalog."default",
+                "EO_num" character varying(255) COLLATE pg_catalog."default",
+                "BASO_num" character varying(255) COLLATE pg_catalog."default",
+                "NEUT_per" character varying(255) COLLATE pg_catalog."default",
+                "LYMPH_per" character varying(255) COLLATE pg_catalog."default",
+                "MONO_per" character varying(255) COLLATE pg_catalog."default",
+                "EO_per" character varying(255) COLLATE pg_catalog."default",
+                "BASO_per" character varying(255) COLLATE pg_catalog."default",
+                "RBC" character varying(255) COLLATE pg_catalog."default",
+                "HGB" character varying(255) COLLATE pg_catalog."default",
+                "HCT" character varying(255) COLLATE pg_catalog."default",
+                "MCV" character varying(255) COLLATE pg_catalog."default",
+                "MCH" character varying(255) COLLATE pg_catalog."default",
+                "MCHC" character varying(255) COLLATE pg_catalog."default",
+                "RDW_SD" character varying(255) COLLATE pg_catalog."default",
+                "RDW_CV" character varying(255) COLLATE pg_catalog."default",
+                "PLT" character varying(255) COLLATE pg_catalog."default",
+                "PCT" character varying(255) COLLATE pg_catalog."default",
+                "MPV" character varying(255) COLLATE pg_catalog."default",
+                "P_LCR" character varying(255) COLLATE pg_catalog."default",
+                "PDW" character varying(255) COLLATE pg_catalog."default",
+                patient_id character varying(255) COLLATE pg_catalog."default",
+                name character varying(255) COLLATE pg_catalog."default",
+                sexcode character varying(255) COLLATE pg_catalog."default",
+                sexname character varying(255) COLLATE pg_catalog."default",
+                birthdate character varying(255) COLLATE pg_catalog."default",
+                nationcode character varying(255) COLLATE pg_catalog."default",
+                nationname character varying(255) COLLATE pg_catalog."default",
+                maritalstatuscode character varying(255) COLLATE pg_catalog."default",
+                maritalstatusname character varying(255) COLLATE pg_catalog."default",
+                occupationcategorycode character varying(255) COLLATE pg_catalog."default",
+                occupationcategoryname character varying(255) COLLATE pg_catalog."default",
+                filingtime character varying(255),
+                nationalitycode character varying(255) COLLATE pg_catalog."default",
+                nationalityname character varying(255) COLLATE pg_catalog."default",
+                edubackgroundcode character varying(255) COLLATE pg_catalog."default",
+                edubackgroundname character varying(255) COLLATE pg_catalog."default",
+                province character varying(255) COLLATE pg_catalog."default",
+                city character varying(255) COLLATE pg_catalog."default",
+                county character varying(255) COLLATE pg_catalog."default",
+                orgcode character varying(255) COLLATE pg_catalog."default",
+                dataid1 character varying(255) COLLATE pg_catalog."default",
+                orgname character varying(255) COLLATE pg_catalog."default",
+                visitno1 character varying(255) COLLATE pg_catalog."default",
+                patient_id1 character varying(255) COLLATE pg_catalog."default",
+                visittypecode character varying(255) COLLATE pg_catalog."default",
+                visittypename character varying(255) COLLATE pg_catalog."default",
+                departcode character varying(255) COLLATE pg_catalog."default",
+                departname character varying(255) COLLATE pg_catalog."default",
+                abobloodcode character varying(255) COLLATE pg_catalog."default",
+                abobloodname character varying(255) COLLATE pg_catalog."default",
+                rhbloodcode character varying(255) COLLATE pg_catalog."default",
+                rhbloodname character varying(255) COLLATE pg_catalog."default",
+                chiefcomplaint character varying(255) COLLATE pg_catalog."default",
+                diseaseshistory character varying(255) COLLATE pg_catalog."default",
+                infectionhistory character varying(255) COLLATE pg_catalog."default",
+                preventiveinoculationhistory character varying(255) COLLATE pg_catalog."default",
+                operationhistory character varying(255) COLLATE pg_catalog."default",
+                bloodtranshistory character varying(255) COLLATE pg_catalog."default",
+                allergichistory character varying(255) COLLATE pg_catalog."default",
+                personalhistory character varying(255) COLLATE pg_catalog."default",
+                obstericalhistory character varying(255) COLLATE pg_catalog."default",
+                menstrualhistory character varying(255) COLLATE pg_catalog."default",
+                familyhistory character varying(255) COLLATE pg_catalog."default",
+                physicalexamination character varying(255) COLLATE pg_catalog."default",
+                outpatientservice character varying(255) COLLATE pg_catalog."default",
+                bloodpressure character varying(255) COLLATE pg_catalog."default",
+                heartrate character varying(255) COLLATE pg_catalog."default",
+                temperature character varying(255) COLLATE pg_catalog."default",
+                bmi character varying(255) COLLATE pg_catalog."default",
+                orgcode1 character varying(255) COLLATE pg_catalog."default",
+                orgname1 character varying(255) COLLATE pg_catalog."default",
+                dataid2 character varying(255) COLLATE pg_catalog."default",
+                visitno2 character varying(255) COLLATE pg_catalog."default",
+                patient_id2 character varying(255) COLLATE pg_catalog."default",
+                visittypecode1 character varying(255) COLLATE pg_catalog."default",
+                visittypename1 character varying(255) COLLATE pg_catalog."default",
+                visitdatetime character varying(255) COLLATE pg_catalog."default",
+                admissiondatetime character varying(255) COLLATE pg_catalog."default",
+                dischargedatetime character varying(255) COLLATE pg_catalog."default",
+                diseasestatecode character varying(255) COLLATE pg_catalog."default",
+                diseasestatename character varying(255) COLLATE pg_catalog."default",
+                referralsign character varying(255) COLLATE pg_catalog."default",
+                infectionsign character varying(255) COLLATE pg_catalog."default",
+                visitreason character varying(255) COLLATE pg_catalog."default",
+                visitdeptnum character varying(255) COLLATE pg_catalog."default",
+                visitdeptname character varying(255) COLLATE pg_catalog."default",
+                visitdoctorcode character varying(255) COLLATE pg_catalog."default",
+                visitdoctorname character varying(255) COLLATE pg_catalog."default",
+                onsetdatetime character varying(255) COLLATE pg_catalog."default",
+                othermedicalmeasure character varying(255) COLLATE pg_catalog."default",
+                deathcausecode character varying(255) COLLATE pg_catalog."default",
+                deathcausename character varying(255) COLLATE pg_catalog."default",
+                wardareacode character varying(255) COLLATE pg_catalog."default",
+                wardareaname character varying(255) COLLATE pg_catalog."default",
+                sickroomno character varying(255) COLLATE pg_catalog."default",
+                sickbedno character varying(255) COLLATE pg_catalog."default",
+                responsibilitydoctorcode character varying(255) COLLATE pg_catalog."default",
+                responsibilitydoctor character varying(255) COLLATE pg_catalog."default",
+                age character varying(255) COLLATE pg_catalog."default",
+                ageunit character varying(255) COLLATE pg_catalog."default",
+                height character varying(255) COLLATE pg_catalog."default",
+                weight character varying(255) COLLATE pg_catalog."default",
+                cureresultcode character varying(255) COLLATE pg_catalog."default",
+                cureresultname character varying(255) COLLATE pg_catalog."default",
+                patient_id3 character varying(255) COLLATE pg_catalog."default",
+                dataid3 character varying(255) COLLATE pg_catalog."default",
+                cardno character varying(255) COLLATE pg_catalog."default",
+                cardtypecode character varying(255) COLLATE pg_catalog."default",
+                cardtypename character varying(255) COLLATE pg_catalog."default",
+                orgcode2 character varying(255) COLLATE pg_catalog."default",
+                orgname2 character varying(255) COLLATE pg_catalog."default",
+                patient_empi character varying(255) COLLATE pg_catalog."default",
+                name1 character varying(255) COLLATE pg_catalog."default",
+                sexcode1 character varying(255) COLLATE pg_catalog."default",
+                sexname1 character varying(255) COLLATE pg_catalog."default",
+                dataid4 character varying(255) COLLATE pg_catalog."default",
+                orgcode3 character varying(255) COLLATE pg_catalog."default",
+                orgname3 character varying(255) COLLATE pg_catalog."default",
+                visitno3 character varying(255) COLLATE pg_catalog."default",
+                patient_id4 character varying(255) COLLATE pg_catalog."default",
+                visittypecode2 character varying(255) COLLATE pg_catalog."default",
+                visittypename2 character varying(255) COLLATE pg_catalog."default",
+                visitdepartcode character varying(255) COLLATE pg_catalog."default",
+                visitdepartname character varying(255) COLLATE pg_catalog."default",
+                visitdatetime1 character varying(255) COLLATE pg_catalog."default",
+                chinesewesterndiagmark character varying(255) COLLATE pg_catalog."default",
+                ishostdiag character varying(255) COLLATE pg_catalog."default",
+                diagno character varying(255) COLLATE pg_catalog."default",
+                suspediagmark character varying(255) COLLATE pg_catalog."default",
+                diagnamecatecode character varying(255) COLLATE pg_catalog."default",
+                diagnamecatename character varying(255) COLLATE pg_catalog."default",
+                diagcode character varying(255) COLLATE pg_catalog."default",
+                diagname character varying(255) COLLATE pg_catalog."default",
+                tcmdiseasecode character varying(255) COLLATE pg_catalog."default",
+                tcmdiseasename character varying(255) COLLATE pg_catalog."default",
+                diagdatetime character varying(255) COLLATE pg_catalog."default",
+                diagcomment character varying(255) COLLATE pg_catalog."default",
+                tcmsyndcode character varying(255) COLLATE pg_catalog."default",
+                tcmsyndname character varying(255) COLLATE pg_catalog."default",
+                diagdasedcode character varying(255) COLLATE pg_catalog."default",
+                diagdasedname character varying(255) COLLATE pg_catalog."default",
+                observationresults character varying(255) COLLATE pg_catalog."default",
+                diagdoctorcode character varying(255) COLLATE pg_catalog."default",
+                diagdoctorcame character varying(255) COLLATE pg_catalog."default"
+                )
+    </update>
+
+<!--    <select id="getTableData" resultType="java.util.Map">-->
+<!--        select * from ${tableName};-->
+<!--    </select>-->
+    <select id="getFilterData" resultType="java.util.LinkedHashMap">
+        select * from ${tableName} where
+        <foreach collection="conditions" item="featureVo">
+            ${featureVo.optString} "${featureVo.featureName}" ${featureVo.computeOpt} ${featureVo.value}
+        </foreach>
+    </select>
+        <select id="getTableData" resultType="java.util.LinkedHashMap">
+                select * from "${tableName}" limit 50;
+        </select>
+        <select id="getColsTableData" resultType="java.util.LinkedHashMap">
+                select
+                    <foreach collection="colsName" item="colName" separator=",">
+                            "${colName}"
+                    </foreach>
+                from ${tableName};
+        </select>
+
+        <select id="getAllTableData" resultType="java.util.LinkedHashMap">
+                select * from ${tableName};
+        </select>
+        <select id="getCountByCondition" resultType="java.lang.Integer">
+                SELECT COUNT(*) FROM ${tableName} WHERE "${featureName}" BETWEEN '${start}' AND '${end}';
+        </select>
+        <select id="getAllCount" resultType="java.lang.Integer">
+                select COUNT(*) FROM ${tableName};
+        </select>
+        <select id="getCount" resultType="java.lang.Integer">
+                select COUNT(*) FROM ${tableName} where "${featureName}"='${featureValue}'
+        </select>
+
+
+</mapper>

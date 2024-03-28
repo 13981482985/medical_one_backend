@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cqupt.software_1.mapper.CategoryMapper">
+    <update id="removeNode">
+        update category set is_delete=1 where id = CAST(#{id} AS VARCHAR);;
+    </update>
+</mapper>

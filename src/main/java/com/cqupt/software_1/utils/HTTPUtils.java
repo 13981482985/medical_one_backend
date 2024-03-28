@@ -1,0 +1,39 @@
+package com.cqupt.software_1.utils;
+
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+public class HTTPUtils {
+    public static final String rootPath = "http://localhost:5000/";
+    public static JsonNode postRequest(Object paramData, String path) throws URISyntaxException, IOException {
+        URI uri = new URI(rootPath+path);
+        // 创建http POST
+        HttpPost httpPost = new HttpPost(uri);
+        HttpClient httpClient = HttpClients.createDefault();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(JsonParser.Feature.ALLOW_NON_NUMERIC_NUMBERS, true);
+        String jsonData = objectMapper.writeValueAsString(paramData);
+
+        httpPost.setHeader(HttpHeaders.CONTENT_TYPE,"application/json");
+        httpPost.setEntity(new StringEntity(jsonData)); // 设置请求体
+
+        // 执行请求
+        HttpResponse response = httpClient.execute(httpPost);
+        String responseData = EntityUtils.toString(response.getEntity());
+
+        JsonNode jsonNode = objectMapper.readValue(responseData, JsonNode.class);
+        return jsonNode;
+    }
+}

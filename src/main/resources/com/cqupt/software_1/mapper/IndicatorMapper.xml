@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cqupt.software_1.mapper.IndicatorMapper">
+
+    <select id="getEnNames" resultType="com.cqupt.software_1.entity.IndicatorCategory">
+        select * from "indicator_category" where
+        "indicator_name" in (
+            <foreach collection="types" item="type" separator=",">
+                '${type}'
+            </foreach>
+        );
+    </select>
+</mapper>
