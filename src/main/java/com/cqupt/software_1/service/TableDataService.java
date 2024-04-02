@@ -25,4 +25,6 @@ public interface TableDataService {
     FeatureDescAnaVo featureDescAnalyze(String featureName, String tableName) throws IOException, URISyntaxException;
 
     SingleAnalyzeVo singleFactorAnalyze(String tableName, List<String> colNames) throws IOException, URISyntaxException;
+
+    ConsistencyAnalyzeVo consistencyAnalyze(String tableName, String featureName) throws IOException, URISyntaxException;
 }

@@ -43,7 +43,6 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
         List<String> indexEnNames = categories.stream().map(indicatorCategory -> {
             return indicatorCategory.getIndicator();
         }).collect(Collectors.toList());
-
         List<FieldManagementEntity> fieldManagementEntities = fieldManagementService.getFieldsByType(indexEnNames);
         for (FieldManagementEntity fieldManagementEntity : fieldManagementEntities) {
             IndicatorManageEntity indicatorManageEntity = new IndicatorManageEntity();
@@ -87,6 +86,8 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
     }
     @Override
     public List<IndicatorsMissDataVo> getIndicatorsInfo(List<IndicatorManageEntity> checkedFeats, String tableName) {
+        System.out.println("------------------------");
+        System.out.println("tableName:"+tableName+" cheackedFeacts:"+JSON.toJSONString(checkedFeats));
         // 跟据特征名称和表名查询有效值，缺失值个数
         List<IndicatorsMissDataVo> indicatorsMissDataVos = new ArrayList<>();
         for (IndicatorManageEntity checkedFeat : checkedFeats) {

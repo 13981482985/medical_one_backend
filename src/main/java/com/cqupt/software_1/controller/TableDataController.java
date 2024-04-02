@@ -8,10 +8,7 @@ import com.cqupt.software_1.service.CategoryService;
 import com.cqupt.software_1.service.TableDataService;
 import com.cqupt.software_1.service.TableDescribeService;
 import com.cqupt.software_1.service.UserService;
-import com.cqupt.software_1.vo.ExportFilledDataTableVo;
-import com.cqupt.software_1.vo.FeatureDescAnaVo;
-import com.cqupt.software_1.vo.FilterTableDataVo;
-import com.cqupt.software_1.vo.SingleAnalyzeVo;
+import com.cqupt.software_1.vo.*;
 import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -100,7 +97,7 @@ public class TableDataController {
         return R.success(200,"SUCCESS");
     }
 
-    // 列描述性分析
+    // TODO 列描述性分析
     @GetMapping("/tableDesAnalyze")
     public R getDesTableData(@RequestParam("featureName") String featureName, @RequestParam("tableName") String tableName) throws IOException, URISyntaxException {
         FeatureDescAnaVo featureDescAnaVo =  tableDataService.featureDescAnalyze(featureName,tableName);
@@ -114,6 +111,14 @@ public class TableDataController {
         System.out.println("表名："+tableName+"  列名："+colNames);
         SingleAnalyzeVo singleAnalyzeVo = tableDataService.singleFactorAnalyze(tableName,colNames);
         return R.success("200",singleAnalyzeVo);
+    }
+
+    // TODO 一致性验证
+    @GetMapping("/consistencyAnalyze")
+    public R getConsistencyAnalyze(@RequestParam("tableName") String tableName, @RequestParam("featureName") String featureName) throws IOException, URISyntaxException {
+        System.out.println("表名："+tableName+"  列名："+featureName);
+        ConsistencyAnalyzeVo consistencyAnalyze = tableDataService.consistencyAnalyze(tableName,featureName);
+        return R.success("200",consistencyAnalyze);
     }
 
 }

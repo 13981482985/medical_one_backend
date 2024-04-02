@@ -33,6 +33,7 @@ public class IndicatorManagementController {
     }
     @PostMapping("/getIndicatorsInfo")
     public R<List<IndicatorsMissDataVo>> getIndicatorsInfo(@RequestBody IndicatorsMissDataVos indicatorsMissDataVos){
+        System.out.println("參數："+JSON.toJSONString(indicatorsMissDataVos));
         List<IndicatorsMissDataVo> list = indicatorManagementService.getIndicatorsInfo(indicatorsMissDataVos.getCheckedFeats(),indicatorsMissDataVos.getTableName());
         return R.success("200",list);
     }

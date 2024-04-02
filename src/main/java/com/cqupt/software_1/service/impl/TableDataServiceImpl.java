@@ -382,6 +382,45 @@ public class TableDataServiceImpl implements TableDataService {
         return singleAnalyzeDataFromJsonNode;
     }
 
+    // TODO 一致性验证
+    @Override
+    public ConsistencyAnalyzeVo consistencyAnalyze(String tableName, String featureName) throws IOException, URISyntaxException {
+        ArrayList<String> featureNames = new ArrayList<>();
+        featureNames.add(featureName);
+        RunPyEntity param = new RunPyEntity(tableName,null,featureNames);
+        JsonNode jsonNode = HTTPUtils.postRequest(param, "/consistencyAnalyze");
+        List<ICCVo> consistencyAnalyzeFromJsonNode = getConsistencyAnalyzeFromJsonNode(jsonNode);
+        ConsistencyAnalyzeVo consistencyAnalyzeVo = new ConsistencyAnalyzeVo();
+        consistencyAnalyzeVo.setICCAnalyzeResult(consistencyAnalyzeFromJsonNode);
+        return consistencyAnalyzeVo;
+    }
+
+    private List<ICCVo> getConsistencyAnalyzeFromJsonNode(JsonNode jsonNode){
+        JsonNode icc1 = jsonNode.get("ICC1");
+        JsonNode icc2 = jsonNode.get("ICC2");
+        ICCVo iccVo1 = new ICCVo();
+        ICCVo iccVo2 = new ICCVo();
+        iccVo1.setMethod(icc1.get("method").asText());
+        iccVo1.setType(icc1.get("type").asText());
+        iccVo1.setICC(icc1.get("ICC").asDouble());
+        iccVo1.setDf1(icc1.get("df1").asInt());
+        iccVo1.setDf2(icc1.get("df2").asInt());
+        iccVo1.setF(icc1.get("F").asDouble());
+        iccVo1.setP(icc1.get("p").asDouble());
+
+        iccVo2.setMethod(icc2.get("method").asText());
+        iccVo2.setType(icc2.get("type").asText());
+        iccVo2.setICC(icc2.get("ICC").asDouble());
+        iccVo2.setDf1(icc2.get("df1").asInt());
+        iccVo2.setDf2(icc2.get("df2").asInt());
+        iccVo2.setF(icc2.get("F").asDouble());
+        iccVo2.setP(icc2.get("p").asDouble());
+        ArrayList<ICCVo> iccVos = new ArrayList<>();
+        iccVos.add(iccVo1);
+        iccVos.add(iccVo2);
+        System.out.println("ICC:"+JSON.toJSONString(iccVos));
+        return iccVos;
+    }
 
     private SingleAnalyzeVo getSingleAnalyzeDataFromJsonNode(JsonNode jsonNode){
         SingleAnalyzeVo singleAnalyzeVo = new SingleAnalyzeVo();
