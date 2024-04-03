@@ -20,7 +20,7 @@ public interface TableDataService {
 
     List<LinkedHashMap<String, Object>> getFilterDataByConditions(List<CreateTableFeatureVo> characterList,CategoryEntity nodeData);
 
-    void exportFile(ExportFilledDataTableVo dataFillMethodVo);
+    List<String> exportFile(ExportFilledDataTableVo dataFillMethodVo) throws IOException;
 
     FeatureDescAnaVo featureDescAnalyze(String featureName, String tableName) throws IOException, URISyntaxException;
 

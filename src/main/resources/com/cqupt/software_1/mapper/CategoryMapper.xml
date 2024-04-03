@@ -3,7 +3,10 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cqupt.software_1.mapper.CategoryMapper">
-    <update id="removeNode">
-        update category set is_delete=1 where id = CAST(#{id} AS VARCHAR);;
-    </update>
+    <delete id="removeNode">
+        delete from category where id = CAST(#{id} AS VARCHAR);
+    </delete>
+    <select id="setParentLabelByLabel" resultType="java.lang.String">
+        select label from category where "id"=(select parent_id from category where label='${tableName}')
+    </select>
 </mapper>

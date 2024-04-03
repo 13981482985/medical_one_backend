@@ -3,11 +3,15 @@ package com.cqupt.software_1.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.cqupt.software_1.common.MissDataCompleteMethods;
 import com.cqupt.software_1.common.RunPyEntity;
+import com.cqupt.software_1.common.UserThreadLocal;
 import com.cqupt.software_1.entity.FieldManagementEntity;
 import com.cqupt.software_1.entity.IndicatorCategory;
 import com.cqupt.software_1.entity.IndicatorManageEntity;
+import com.cqupt.software_1.entity.Task;
+import com.cqupt.software_1.mapper.CategoryMapper;
 import com.cqupt.software_1.mapper.IndicatorManagementMapper;
 import com.cqupt.software_1.mapper.TableDataMapper;
+import com.cqupt.software_1.mapper.TaskMapper;
 import com.cqupt.software_1.service.FieldManagementService;
 import com.cqupt.software_1.service.IndicatorManagementService;
 import com.cqupt.software_1.service.IndicatorService;
@@ -19,6 +23,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,6 +39,10 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
     IndicatorService indicatorService;
     @Autowired
     FieldManagementService fieldManagementService;
+    @Autowired
+    CategoryMapper categoryMapper;
+    @Autowired
+    private TaskMapper taskMapper;
 
     // TODO 根据检查类型获取字段以及表中每一个字段的缺失率
     @Override
@@ -144,9 +154,42 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                 }
                 res.add(map);
             }
+            // 创建任务模型
+            Task task = new Task();
+            // 获取当前时间的 LocalDateTime 对象
+            LocalDateTime now = LocalDateTime.now();
+            Timestamp timestamp = Timestamp.valueOf(now);
+            task.setCreatetime(timestamp);
+            task.setDataset(dataFillMethodVo.getTableName());
+
+            List<String> featureNames = dataFillMethodVo.getMissCompleteMethod().stream().map(indicatorsMissDataVo -> {
+                return indicatorsMissDataVo.getIndex();
+            }).collect(Collectors.toList());
+            String str = featureNames.stream().collect(Collectors.joining(","));
+
+            task.setFeature(str); //有哪些列
+            task.setTargetcolumn(str);
+
+            task.setLeader(UserThreadLocal.get().getUsername());
+
+            String models = dataFillMethodVo.getMissCompleteMethod().stream().map(indicatorsMissDataVo -> {
+                return indicatorsMissDataVo.getMissCompleteMethod();
+            }).collect(Collectors.joining(","));
+            task.setModel(models); // 每列的插补算法
+
+            task.setTaskname("缺失值补齐");
+            // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
+            String label = categoryMapper.setParentLabelByLabel(dataFillMethodVo.getTableName());
+            task.setDisease(label);
+            task.setUserid(UserThreadLocal.get().getUid());
+            task.setLeader(UserThreadLocal.get().getUsername());
+            taskMapper.insert(task);
+
         }catch (Exception e){
             e.printStackTrace();
         }
+
+
 
         return res;
     }

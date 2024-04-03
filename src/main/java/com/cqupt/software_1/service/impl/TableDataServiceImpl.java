@@ -5,17 +5,11 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cqupt.software_1.common.DataTable;
 import com.cqupt.software_1.common.RunPyEntity;
 import com.cqupt.software_1.common.UserThreadLocal;
-import com.cqupt.software_1.entity.CategoryEntity;
-import com.cqupt.software_1.entity.FieldManagementEntity;
-import com.cqupt.software_1.entity.TableDescribeEntity;
-import com.cqupt.software_1.entity.UserLog;
+import com.cqupt.software_1.entity.*;
 import com.cqupt.software_1.mapper.CategoryMapper;
 import com.cqupt.software_1.mapper.TableDataMapper;
 import com.cqupt.software_1.mapper.TableDescribeMapper;
-import com.cqupt.software_1.service.FieldManagementService;
-import com.cqupt.software_1.service.IndicatorManagementService;
-import com.cqupt.software_1.service.TableDataService;
-import com.cqupt.software_1.service.UserLogService;
+import com.cqupt.software_1.service.*;
 import com.cqupt.software_1.utils.HTTPUtils;
 import com.cqupt.software_1.vo.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.URISyntaxException;
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -49,6 +44,9 @@ public class TableDataServiceImpl implements TableDataService {
     CategoryMapper categoryMapper;
     @Autowired
     UserLogService userLogService;
+
+    @Autowired
+    TaskService taskService;
 
     @Autowired
     FieldManagementService fieldManagementService;
@@ -136,12 +134,8 @@ public class TableDataServiceImpl implements TableDataService {
             for (FieldManagementEntity field : fields) {
                 if(diseaseDatum.get(field.getFeatureName())==null)
                 {
-                    diseaseDatum.put(field.getFeatureName(),"");
+                    diseaseDatum.put(field.getFeatureName(),null);
                 }
-//                if(diseaseDatum.get("chiefcomplaint")==null){
-//                    System.err.println("没有疾病室---------------------------------------");
-//                    diseaseDatum.put("chiefcomplaint","");
-//                }
             }
         }
         // TODO 分批插入 防止sql参数传入过多导致溢出
@@ -195,13 +189,11 @@ public class TableDataServiceImpl implements TableDataService {
         /** 找到所有的非考虑疾病的宽表节点 **/
         List<CategoryEntity> otherWideTable = null;
         if(leafNodes!=null && leafNodes.size()>0){
-            System.out.println("非空！！！！！！！！！！！！");
             for (CategoryEntity leafNode : leafNodes) {
                 if(leafNode.getIsWideTable()!=null && leafNode.getIsWideTable()==1) {
                     otherWideTable = allWideTableNodes.stream().filter(categoryEntity -> { // 所有的非考虑疾病的宽表节点
                         return !categoryEntity.getLabel().equals(leafNode.getLabel());
                     }).collect(Collectors.toList());
-                    System.out.println("非空wideNOde："+JSON.toJSONString(otherWideTable));
                 }
             }
         }else{
@@ -268,7 +260,7 @@ public class TableDataServiceImpl implements TableDataService {
 
     // 数据填充后将数据导出csv 文件 List<String> 每一个string都是一行数据，以逗号分开
     @Override
-    public void exportFile(ExportFilledDataTableVo dataFillMethodVo) {
+    public List<String> exportFile(ExportFilledDataTableVo dataFillMethodVo){
         // 获取填充的数据信息
         List<Map<String, IsFillVo>> fillData = indicatorManagementService.fillData(dataFillMethodVo.getDataFillMethodVo()); // 每一个map是一行数据（只有填充的列）
         // 获取这个表的所有数据
@@ -313,10 +305,12 @@ public class TableDataServiceImpl implements TableDataService {
             fileData.add(temp.toString());
         }
         // 获取所有列名信息
-        String csvFilepath = dataFillMethodVo.getPath()+"\\"+dataFillMethodVo.getFileName()+".csv";
-        writeDataToCSV(fileData, csvFilepath);
+//        String csvFilepath = dataFillMethodVo.getPath()+"\\"+dataFillMethodVo.getFileName()+".csv";
+//        writeDataToCSV(fileData, csvFilepath);
+//        String collect = fileData.stream().collect(Collectors.joining("\n"));
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"疾病数据文件导出");
         userLogService.save(userLog);
+        return fileData;
     }
 
 
@@ -370,6 +364,25 @@ public class TableDataServiceImpl implements TableDataService {
         }
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"疾病数据描述性分析");
         userLogService.save(userLog);
+
+
+
+        // 创建任务
+        Task task = new Task();
+        task.setCreatetime(new Timestamp(System.currentTimeMillis()));
+        task.setDataset(tableName);
+        task.setFeature(featureName);
+        task.setLeader(UserThreadLocal.get().getUsername());
+        task.setTaskname("描述性分析");
+        // 获取关联疾病 TODO
+        // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
+        String label = categoryMapper.setParentLabelByLabel(tableName);
+        task.setDisease(label);
+        task.setRemark("指标描述性分析");
+        task.setResult(JSON.toJSONString(featureDescAnaVo));
+        task.setUserid(UserThreadLocal.get().getUid());
+        task.setTargetcolumn(featureName);
+        taskService.save(task);
         return featureDescAnaVo;
     }
 
@@ -378,7 +391,23 @@ public class TableDataServiceImpl implements TableDataService {
         RunPyEntity param = new RunPyEntity(tableName,null,colNames);
         JsonNode jsonNode = HTTPUtils.postRequest(param, "/singleFactorAnalyze");
         SingleAnalyzeVo singleAnalyzeDataFromJsonNode = getSingleAnalyzeDataFromJsonNode(jsonNode);
-        System.out.println("处理结果为："+JSON.toJSONString(singleAnalyzeDataFromJsonNode));
+        // 创建任务
+        Task task = new Task();
+        task.setCreatetime(new Timestamp(System.currentTimeMillis()));
+        task.setDataset(tableName);
+        String featureNames = colNames.stream().collect(Collectors.joining(","));
+        task.setFeature(featureNames);
+        task.setLeader(UserThreadLocal.get().getUsername());
+        task.setTaskname("单因素分析");
+        // 获取关联疾病 TODO
+        // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
+        String label = categoryMapper.setParentLabelByLabel(tableName);
+        task.setDisease(label);
+        task.setRemark("指标单因素分析");
+        task.setResult(JSON.toJSONString(singleAnalyzeDataFromJsonNode));
+        task.setUserid(UserThreadLocal.get().getUid());
+        task.setTargetcolumn(colNames.get(0));
+        taskService.save(task);
         return singleAnalyzeDataFromJsonNode;
     }
 
@@ -389,9 +418,28 @@ public class TableDataServiceImpl implements TableDataService {
         featureNames.add(featureName);
         RunPyEntity param = new RunPyEntity(tableName,null,featureNames);
         JsonNode jsonNode = HTTPUtils.postRequest(param, "/consistencyAnalyze");
+        System.out.println("返回状态码："+jsonNode.get("code").asInt());
+        if(jsonNode.get("code").asInt()==500) return null;
         List<ICCVo> consistencyAnalyzeFromJsonNode = getConsistencyAnalyzeFromJsonNode(jsonNode);
         ConsistencyAnalyzeVo consistencyAnalyzeVo = new ConsistencyAnalyzeVo();
         consistencyAnalyzeVo.setICCAnalyzeResult(consistencyAnalyzeFromJsonNode);
+        // 创建任务
+        Task task = new Task();
+        task.setCreatetime(new Timestamp(System.currentTimeMillis()));
+        task.setDataset(tableName);
+        task.setFeature(featureName);
+        task.setLeader(UserThreadLocal.get().getUsername());
+        task.setTaskname("一致性验证");
+        // 获取关联疾病 TODO
+        // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
+        String label = categoryMapper.setParentLabelByLabel(tableName);
+        task.setDisease(label);
+        task.setRemark("指标一致性分析");
+        task.setResult(JSON.toJSONString(consistencyAnalyzeVo));
+        task.setUserid(UserThreadLocal.get().getUid());
+        task.setTargetcolumn(featureName);
+        taskService.save(task);
+
         return consistencyAnalyzeVo;
     }
 

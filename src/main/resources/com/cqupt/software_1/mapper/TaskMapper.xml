@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.cqupt.software_1.mapper.TaskMapper">
+
+
+
+    <select id="getAlgorithmUsageDailyStatsLast7Days" resultMap="AlgorithmUsageDailyStatsMap">
+        SELECT
+            t.formattedDate,
+            t.model,
+            t.usageCount,
+            subquery.total
+        FROM (
+                 SELECT
+                     TO_CHAR(createtime, 'MM-DD') AS formattedDate,
+                     model,
+                     COUNT(*) AS usageCount
+                 FROM
+                     "taskmanage"
+                 WHERE
+                     createtime >= CURRENT_DATE - INTERVAL '7 days'
+                 GROUP BY
+                     formattedDate, model
+             ) AS t
+                 JOIN (
+            SELECT
+                TO_CHAR(createtime, 'MM-DD') AS formattedDate,
+                COUNT(*) AS total
+            FROM
+                "taskmanage"
+            WHERE
+                createtime >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY
+                formattedDate
+        ) AS subquery ON t.formattedDate = subquery.formattedDate
+        ORDER BY
+            t.formattedDate, t.model;
+    </select>
+
+    <resultMap id="AlgorithmUsageDailyStatsMap" type="com.cqupt.software_1.entity.AlgorithmUsageDailyStats">
+        <id property="formattedDate" column="formattedDate"/>
+        <id property="total" column="total"/>
+        <collection property="usages" ofType="com.cqupt.software_1.entity.AlgorithmUsage">
+            <result property="model" column="model"/>
+            <result property="usageCount" column="usageCount"/>
+        </collection>
+    </resultMap>
+
+    <select id="getAlgorithmName" resultType="java.lang.String">
+        select Distinct model from "taskmanage"
+    </select>
+
+    <select id="getTaskList" resultType="com.cqupt.software_1.entity.Task">
+        select *  from "taskmanage"
+    </select>
+
+
+
+    <select id="getlistbyId" resultType="com.cqupt.software_1.entity.Task">
+        select * from "taskmanage" where  id = #{Id}
+    </select>
+
+    <delete id="deleteTask">
+        DELETE from "taskmanage" where id = #{id}
+    </delete>
+
+</mapper>
+

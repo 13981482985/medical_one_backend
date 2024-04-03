@@ -13,6 +13,7 @@ import org.apache.http.util.EntityUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 public class HTTPUtils {
     public static final String rootPath = "http://localhost:5000/";
@@ -26,8 +27,13 @@ public class HTTPUtils {
         objectMapper.configure(JsonParser.Feature.ALLOW_NON_NUMERIC_NUMBERS, true);
         String jsonData = objectMapper.writeValueAsString(paramData);
 
-        httpPost.setHeader(HttpHeaders.CONTENT_TYPE,"application/json");
-        httpPost.setEntity(new StringEntity(jsonData)); // 设置请求体
+//        httpPost.setHeader(HttpHeaders.CONTENT_TYPE,"application/json");
+//        httpPost.setEntity(new StringEntity(jsonData)); // 设置请求体
+        // 设置请求体编码为 UTF-8
+        StringEntity entity = new StringEntity(jsonData, StandardCharsets.UTF_8);
+        httpPost.setEntity(entity);
+        httpPost.setHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=UTF-8"); // 设置请求头部
+
 
         // 执行请求
         HttpResponse response = httpClient.execute(httpPost);

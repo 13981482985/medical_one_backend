@@ -42,7 +42,6 @@ public class IndicatorManagementController {
     @PostMapping("/fillData")
     public R fillData(@RequestBody DataFillMethodVo dataFillMethodVo) {
         List<Map<String, IsFillVo>> list = indicatorManagementService.fillData(dataFillMethodVo);
-        System.out.println("返回结果为：" + JSON.toJSONString(list));
         return R.success("200", list);
     }
 }

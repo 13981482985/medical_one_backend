@@ -19,6 +19,7 @@ import java.net.URISyntaxException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 // TODO 公共模块新增类
 
@@ -78,7 +79,6 @@ public class TableDataController {
     // 筛选数据后，创建表保存筛选后的数据
     @PostMapping("/createTable")
     public R createTable(@RequestBody FilterTableDataVo filterTableDataVo){
-        System.out.println("建表参数："+JSON.toJSONString(filterTableDataVo));
          tableDataService.createTable(filterTableDataVo.getAddDataForm().getDataName(),filterTableDataVo.getAddDataForm().getCharacterList(),
                 filterTableDataVo.getAddDataForm().getCreateUser(),filterTableDataVo.getNodeData());
         return R.success(200,"SUCCESS");
@@ -92,23 +92,22 @@ public class TableDataController {
     }
 
     @PostMapping("/exportFile")
-    public R exportFile(@RequestBody ExportFilledDataTableVo dataFillMethodVo){
-        tableDataService.exportFile(dataFillMethodVo);
-        return R.success(200,"SUCCESS");
+    public R exportFile(@RequestBody ExportFilledDataTableVo dataFillMethodVo) throws IOException {
+        List<String> fileData = tableDataService.exportFile(dataFillMethodVo);
+        String fileStr = fileData.stream().collect(Collectors.joining("\n"));
+        return R.success("200",fileStr);
     }
 
     // TODO 列描述性分析
     @GetMapping("/tableDesAnalyze")
     public R getDesTableData(@RequestParam("featureName") String featureName, @RequestParam("tableName") String tableName) throws IOException, URISyntaxException {
         FeatureDescAnaVo featureDescAnaVo =  tableDataService.featureDescAnalyze(featureName,tableName);
-        System.out.println("返回值："+ JSON.toJSONString(featureDescAnaVo));
         return R.success("200",featureDescAnaVo);
     }
 
     // TODO 单因素分析
     @GetMapping("/singleFactorAnalyze")
     public R getSingleFactorAnalyze(@RequestParam("tableName") String tableName, @RequestParam("colNames") List<String> colNames) throws IOException, URISyntaxException {
-        System.out.println("表名："+tableName+"  列名："+colNames);
         SingleAnalyzeVo singleAnalyzeVo = tableDataService.singleFactorAnalyze(tableName,colNames);
         return R.success("200",singleAnalyzeVo);
     }
@@ -116,9 +115,14 @@ public class TableDataController {
     // TODO 一致性验证
     @GetMapping("/consistencyAnalyze")
     public R getConsistencyAnalyze(@RequestParam("tableName") String tableName, @RequestParam("featureName") String featureName) throws IOException, URISyntaxException {
-        System.out.println("表名："+tableName+"  列名："+featureName);
         ConsistencyAnalyzeVo consistencyAnalyze = tableDataService.consistencyAnalyze(tableName,featureName);
-        return R.success("200",consistencyAnalyze);
+        System.out.println(JSON.toJSONString(consistencyAnalyze));
+        if(consistencyAnalyze!=null){
+            return R.success("200",consistencyAnalyze);
+        }else{
+            return R.fail(500,"数据异常，无法分析");
+        }
+
     }
 
 }

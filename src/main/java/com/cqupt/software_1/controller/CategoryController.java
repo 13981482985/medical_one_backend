@@ -6,10 +6,13 @@ import com.cqupt.software_1.entity.Category2Entity;
 import com.cqupt.software_1.entity.CategoryEntity;
 import com.cqupt.software_1.service.Category2Service;
 import com.cqupt.software_1.service.CategoryService;
+import org.hibernate.event.spi.PreCollectionUpdateEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 // TODO 公共模块新增类
 @RestController
@@ -22,7 +25,6 @@ public class CategoryController {
     // 获取目录
     @GetMapping("/category")
     public R<List<CategoryEntity>> getCatgory(){
-        System.out.println("擦汗寻");
         List<CategoryEntity> list = categoryService.getCategory();
         System.out.println(JSON.toJSONString(list));
         return R.success("200",list);
@@ -36,7 +38,6 @@ public class CategoryController {
     // 创建一种新的疾病
     @PostMapping("/addDisease")
     public R addDisease(@RequestBody CategoryEntity categoryNode){
-        System.out.println("参数为："+ JSON.toJSONString(categoryNode));
         categoryService.save(categoryNode);
         return R.success(200,"新增目录成功");
     }
@@ -44,7 +45,6 @@ public class CategoryController {
     // 删除一个目录
     @GetMapping("/category/remove")
     public R removeCate(CategoryEntity categoryEntity){
-        System.out.println("要删除的目录为："+JSON.toJSONString(categoryEntity));;
         categoryService.removeNode(categoryEntity.getId());
         return R.success(200,"删除成功");
     }
@@ -53,6 +53,32 @@ public class CategoryController {
     public R addParentDisease(@RequestParam("diseaseName") String diseaseName){
         categoryService.addParentDisease(diseaseName);
         return R.success("200",null);
+    }
+
+    @GetMapping("/disease/all")
+    public R getAllDisease(){
+        List<CategoryEntity> category = categoryService.getCategory();
+        List<CategoryEntity> notLeafCat = getNotLeafCat(category);
+        // 同时去掉公共数据集节点
+        Stream<CategoryEntity> allDiseaseCat = notLeafCat.stream().filter(categoryEntity -> {
+            return !categoryEntity.getLabel().equals("公共数据集");
+        });
+        return R.success("200",allDiseaseCat);
+
+    }
+    private List<CategoryEntity> getNotLeafCat(List<CategoryEntity> category){
+        // 删除每个叶子节点
+        List<CategoryEntity> level1 = category.stream().filter(categoryEntity -> {
+            return categoryEntity.getIsLeafs()!=1; //  返回一级目录下的所有非叶子节点
+        }).collect(Collectors.toList());
+
+        for (CategoryEntity categoryEntity : level1) {
+            List<CategoryEntity> children = categoryEntity.getChildren();
+            if(children!=null && children.size()>0){
+                categoryEntity.setChildren(getNotLeafCat(children));
+            }
+        }
+        return level1;
     }
 
 
