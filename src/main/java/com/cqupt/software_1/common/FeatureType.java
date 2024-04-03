@@ -2,10 +2,10 @@ package com.cqupt.software_1.common;
 
 // TODO 公共模块新增
 public enum FeatureType {
-    DIAGNOSIS(0, "diagnosis"),
+    DIAGNOSIS(0, "is_demography"),
 //    EXAMINE(1, "examine"),
-    PATHOLOGY(2, "pathology"),
-    VITAL_SIGNS(3, "vital_signs");
+    PATHOLOGY(2, "is_sociology"),
+    VITAL_SIGNS(3, "is_physiological");
 
     private final int code;
     private final String name;

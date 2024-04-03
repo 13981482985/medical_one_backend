@@ -74,13 +74,13 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                     indicatorManageEntity.setMissCompleteMethod("前向填充");
                 }else continue; // 文本非离散 无法分析
             }
-            if(fieldManagementEntity.getDiagnosis()) {
+            if(fieldManagementEntity.getIsDemography()) {
                 indicatorManageEntity.setType("diagnosis");
                 indicatorManageEntity.setTypeCh("人口学指标");
-            }else if(fieldManagementEntity.getVitalSigns()){
+            }else if(fieldManagementEntity.getIsPhysiological()){
                 indicatorManageEntity.setType("vital_sign");
                 indicatorManageEntity.setTypeCh("生理学指标");
-            }else if(fieldManagementEntity.getPathology()){
+            }else if(fieldManagementEntity.getIsSociology()){
                 indicatorManageEntity.setType("pathology");
                 indicatorManageEntity.setTypeCh("社会学指标");
             }else{

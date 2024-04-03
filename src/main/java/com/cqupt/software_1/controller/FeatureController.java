@@ -8,7 +8,9 @@ import com.cqupt.software_1.Util.FieldStats;
 import com.cqupt.software_1.common.R;
 import com.cqupt.software_1.common.RunPyEntity;
 import com.cqupt.software_1.common.RunPyR;
+import com.cqupt.software_1.entity.FieldManagementEntity;
 import com.cqupt.software_1.entity.TableManager;
+import com.cqupt.software_1.service.FieldManagementService;
 import com.cqupt.software_1.service.PageService;
 import com.cqupt.software_1.service.TableManagerService;
 
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 
@@ -46,6 +49,10 @@ public class FeatureController {
     private PageService pageService;
 
 
+    @Autowired
+    FieldManagementService fieldManagementService;
+
+
     @Value("${pyPath}")
     private String pyPath;
 
@@ -57,26 +64,28 @@ public class FeatureController {
      * @return
      */
     @GetMapping("/getAllFiled/{tableName}")
-    public R<Map<String,TableManager>> getFiledByTableName(@PathVariable("tableName")String tableName){
-        // 查找到属性名字
-        List<String> tableNames = tableManagerService.getFiledByTableName(tableName);
-        // 根据属性名字查找 中文描述，是否是找到每个属性是否是人口学 生理学 行为学
-        List<TableManager> tableManagers  = tableManagerService.getAllTableManagersByFiledName(tableNames);
-        System.out.println("colNames: "+JSON.toJSONString(tableNames));
-        System.out.println("tableManagers: "+JSON.toJSONString(tableManagers));
-        Map<String, TableManager> tableMap = new HashMap<>();
-
-        for (int i = 0 ; i< tableNames.size() ; i++){
-            String filedName = tableNames.get(i);
-            TableManager tableManager = tableManagers.get(i);
-            tableMap.put(filedName, tableManager);
-
+    public R<Map<String,FieldManagementEntity>> getFiledByTableName(@PathVariable("tableName")String tableName){
+//        // 查找字段管理表跟据表名查找到表的所有属性
+//        List<String> colNames = tableManagerService.getFiledByTableName(tableName);
+//        // 根据属性名字查找 中文描述，是否是找到每个属性是否是人口学 生理学 行为学
+//        List<TableManager> tableManagers  = tableManagerService.getAllTableManagersByFiledName(colNames);
+//        Map<String, TableManager> tableMap = new HashMap<>();
+//        for (int i = 0 ; i< colNames.size() ; i++){
+//            String filedName = colNames.get(i);
+//            TableManager tableManager = tableManagers.get(i);
+//            tableMap.put(filedName, tableManager);
+//
+//        }
+//        // 将属性名字作为key  注释作为val 存入 resMap
+//        return new R<>(200,"成功",tableMap);
+        HashMap<String, FieldManagementEntity> tableMap  = new HashMap<>();
+        List<FieldManagementEntity> featureList = fieldManagementService.list(null);
+        for (FieldManagementEntity feature : featureList) {
+            if("integer".equals(feature.getUnit()) || "double precision".equals(feature.getUnit())) tableMap.put(feature.getFeatureName(),feature);
         }
-        System.out.println("返回值："+ JSON.toJSONString(tableMap));
-        // 将属性名字作为key  注释作为val 存入 resMap
         return new R<>(200,"成功",tableMap);
-    }
 
+    }
 
     /**
      * 根据表名获取到前面1000行信息
@@ -220,6 +229,7 @@ public class FeatureController {
 
     @PostMapping("/runAi")
     public RunPyR runAi(@RequestBody RunPyEntity runPyEntity) throws URISyntaxException, IOException {
+        System.out.println("RunPyEntit"+JSON.toJSONString(runPyEntity));
         // 算法服务地址
         String baseUri = "http://localhost:5000/";
         // 运行哪个算法就是哪个路径
@@ -228,12 +238,12 @@ public class FeatureController {
         HttpPost httpPost = new HttpPost(uri);
         HttpClient httpClient = HttpClients.createDefault();
         // 将参数列表转换为json
-        List<String> runParams = runPyEntity.getRunParams();
+//        List<String> runParams = runPyEntity.getRunParams();
         ObjectMapper objectMapper = new ObjectMapper();
-        String json = objectMapper.writeValueAsString(runParams);
+        String json = objectMapper.writeValueAsString(runPyEntity);
 
-        httpPost.setEntity(new StringEntity(json));
-        httpPost.setHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+        httpPost.setEntity(new StringEntity(json, StandardCharsets.UTF_8));
+        httpPost.setHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=UTF-8");
 
         // 执行post请求
         HttpResponse response = httpClient.execute(httpPost);

@@ -19,9 +19,9 @@ public class FieldManagementEntity {
     private String chName;
     private Boolean diseaseStandard;
 
-    private Boolean diagnosis;
-    private Boolean pathology;
-    private Boolean vitalSigns;
+    private Boolean isDemography;
+    private Boolean isSociology;
+    private Boolean isPhysiological;
 
     private String tableName;
     private String unit;
