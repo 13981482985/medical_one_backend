@@ -6,7 +6,7 @@
     <delete id="removeNode">
         delete from category where id = CAST(#{id} AS VARCHAR);
     </delete>
-    <select id="setParentLabelByLabel" resultType="java.lang.String">
+    <select id="getParentLabelByLabel" resultType="java.lang.String">
         select label from category where "id"=(select parent_id from category where label='${tableName}')
     </select>
 </mapper>

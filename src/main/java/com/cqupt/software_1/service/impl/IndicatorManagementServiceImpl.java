@@ -154,36 +154,42 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                 }
                 res.add(map);
             }
-            // 创建任务模型
-            Task task = new Task();
-            // 获取当前时间的 LocalDateTime 对象
-            LocalDateTime now = LocalDateTime.now();
-            Timestamp timestamp = Timestamp.valueOf(now);
-            task.setCreatetime(timestamp);
-            task.setDataset(dataFillMethodVo.getTableName());
 
             List<String> featureNames = dataFillMethodVo.getMissCompleteMethod().stream().map(indicatorsMissDataVo -> {
                 return indicatorsMissDataVo.getIndex();
             }).collect(Collectors.toList());
             String str = featureNames.stream().collect(Collectors.joining(","));
-
-            task.setFeature(str); //有哪些列
-            task.setTargetcolumn(str);
-
-            task.setLeader(UserThreadLocal.get().getUsername());
-
             String models = dataFillMethodVo.getMissCompleteMethod().stream().map(indicatorsMissDataVo -> {
                 return indicatorsMissDataVo.getMissCompleteMethod();
             }).collect(Collectors.joining(","));
-            task.setModel(models); // 每列的插补算法
 
-            task.setTaskname("缺失值补齐");
-            // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
-            String label = categoryMapper.setParentLabelByLabel(dataFillMethodVo.getTableName());
-            task.setDisease(label);
-            task.setUserid(UserThreadLocal.get().getUid());
-            task.setLeader(UserThreadLocal.get().getUsername());
-            taskMapper.insert(task);
+
+            List<Task> list = taskMapper.selectList(null);
+            List<Task> isRepeat = list.stream().filter(task -> {
+                return task.getTaskname().equals("缺失值补齐") && task.getFeature().equals(str) && task.getDataset().equals(dataFillMethodVo.getTableName()) && task.getModel().equals(models);
+            }).collect(Collectors.toList());
+            if(isRepeat == null || isRepeat.size() == 0) {
+                // 创建任务模型
+                Task task = new Task();
+                // 获取当前时间的 LocalDateTime 对象
+                LocalDateTime now = LocalDateTime.now();
+                Timestamp timestamp = Timestamp.valueOf(now);
+                task.setCreatetime(timestamp);
+                task.setDataset(dataFillMethodVo.getTableName());
+                task.setFeature(str); //有哪些列
+                task.setTargetcolumn(str);
+
+                task.setLeader(UserThreadLocal.get().getUsername());
+
+                task.setModel(models); // 每列的插补算法
+                task.setTaskname("缺失值补齐");
+                // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
+                String label = categoryMapper.getParentLabelByLabel(dataFillMethodVo.getTableName());
+                task.setDisease(label);
+                task.setUserid(UserThreadLocal.get().getUid());
+                task.setLeader(UserThreadLocal.get().getUsername());
+                taskMapper.insert(task);
+            }
 
         }catch (Exception e){
             e.printStackTrace();

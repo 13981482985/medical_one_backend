@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,7 @@ public class TableDataController {
         return R.success("200",tableData);
     }
 
-    // 文件上传
+    // TODO 文件上传
     @PostMapping("/dataTable/upload")
     public R uploadFile(@RequestParam("file") MultipartFile file,
                              @RequestParam("newName") String tableName,
@@ -61,7 +62,7 @@ public class TableDataController {
         }
     }
 
-    // 检查上传文件是数据文件的表名在数据库中是否重复
+    // TODO 检查上传文件是数据文件的表名在数据库中是否重复
     @GetMapping("/DataTable/inspection")
     public R tableInspection(@RequestParam("newname") String name){
         List<CategoryEntity> list = categoryService.list(new QueryWrapper<CategoryEntity>(null));
@@ -108,6 +109,7 @@ public class TableDataController {
     // TODO 单因素分析
     @GetMapping("/singleFactorAnalyze")
     public R getSingleFactorAnalyze(@RequestParam("tableName") String tableName, @RequestParam("colNames") List<String> colNames) throws IOException, URISyntaxException {
+        System.out.println("表名："+tableName+" 列表："+colNames);
         SingleAnalyzeVo singleAnalyzeVo = tableDataService.singleFactorAnalyze(tableName,colNames);
         return R.success("200",singleAnalyzeVo);
     }
@@ -122,7 +124,36 @@ public class TableDataController {
         }else{
             return R.fail(500,"数据异常，无法分析");
         }
+    }
 
+    // TODO 根据字段列表和表名导出数据
+    @GetMapping("/getTableDataByFields")
+    public R getTableDataByFields(@RequestParam("tableName") String tableName, @RequestParam("featureList") List<String> featureList){
+        List<Map<String, Object>> tableDataByFields = tableDataService.getTableDataByFields(tableName,featureList);
+        // 将数据变成list<String>类型 每个list代表一行数据，中间用逗号隔开
+        List<String> fileData = new ArrayList<>();
+        StringBuffer tableHead = new StringBuffer();
+        for(int i=0; i<featureList.size(); i++){
+            if(i!=featureList.size()-1){
+                tableHead.append(featureList.get(i)+",");
+            }else{
+                tableHead.append(featureList.get(i));
+            }
+        }
+        fileData.add(tableHead.toString());
+        for (Map<String, Object> rowData: tableDataByFields) {
+            StringBuffer temp = new StringBuffer();
+            for(int i=0; i<featureList.size(); i++){
+                if(i!=featureList.size()-1) {
+                    temp.append(rowData.get(featureList.get(i))+",");
+                }else{
+                    temp.append(rowData.get(featureList.get(i)));
+                }
+            }
+            fileData.add(temp.toString());
+        }
+        String fileStr = fileData.stream().collect(Collectors.joining("\n"));
+        return R.success("200",fileStr);
     }
 
 }

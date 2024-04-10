@@ -12,5 +12,5 @@ import org.apache.ibatis.annotations.Select;
 public interface CategoryMapper extends BaseMapper<CategoryEntity> {
     void removeNode(@Param("id") String id);
 
-    String setParentLabelByLabel(String tableName);
+    String getParentLabelByLabel(String tableName);
 }

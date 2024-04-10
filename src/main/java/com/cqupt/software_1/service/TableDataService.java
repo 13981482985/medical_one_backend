@@ -9,6 +9,7 @@ import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 // TODO 公共模块新增类
 public interface TableDataService {
@@ -27,4 +28,6 @@ public interface TableDataService {
     SingleAnalyzeVo singleFactorAnalyze(String tableName, List<String> colNames) throws IOException, URISyntaxException;
 
     ConsistencyAnalyzeVo consistencyAnalyze(String tableName, String featureName) throws IOException, URISyntaxException;
+
+    List<Map<String, Object>> getTableDataByFields(String tableName, List<String> featureList);
 }

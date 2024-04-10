@@ -2,7 +2,6 @@ package com.cqupt.software_1.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.cqupt.software_1.common.DataTable;
 import com.cqupt.software_1.common.RunPyEntity;
 import com.cqupt.software_1.common.UserThreadLocal;
 import com.cqupt.software_1.entity.*;
@@ -15,7 +14,6 @@ import com.cqupt.software_1.vo.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
-import org.omg.CORBA.NO_IMPLEMENT;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -79,13 +77,17 @@ public class TableDataServiceImpl implements TableDataService {
         categoryEntity.setPath(parentCate.getPath()+"/"+tableName);
         categoryEntity.setParentId(parentId);
         categoryEntity.setIsDelete(0);
+
         // 保存数据库
         categoryMapper.insert(categoryEntity);
         tableDescribeEntity.setTableId(categoryEntity.getId());
         tableDescribeMapper.insert(tableDescribeEntity);
+
         List<String> featureList = storeTableData(file, tableName);
+
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"数据文件上传");
         userLogService.save(userLog);
+
         return featureList;
     }
 
@@ -286,7 +288,7 @@ public class TableDataServiceImpl implements TableDataService {
         List<String> fileData = new ArrayList<>();
         StringBuffer tableHead = new StringBuffer();
         for(int i=0; i<fields.size(); i++){
-            if(1!=fields.size()-1){
+            if(i!=fields.size()-1){
                 tableHead.append(fields.get(i).getFeatureName()+",");
             }else{
                 tableHead.append(fields.get(i).getFeatureName());
@@ -304,10 +306,6 @@ public class TableDataServiceImpl implements TableDataService {
             }
             fileData.add(temp.toString());
         }
-        // 获取所有列名信息
-//        String csvFilepath = dataFillMethodVo.getPath()+"\\"+dataFillMethodVo.getFileName()+".csv";
-//        writeDataToCSV(fileData, csvFilepath);
-//        String collect = fileData.stream().collect(Collectors.joining("\n"));
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"疾病数据文件导出");
         userLogService.save(userLog);
         return fileData;
@@ -347,6 +345,9 @@ public class TableDataServiceImpl implements TableDataService {
             for (String featureValue : featureValues) {
                 DiscreteVo discreteVo = new DiscreteVo();
                 // 计算每个取值的数据总条数
+
+                featureValue = featureValue.trim().replace("\"", "");
+                System.out.println("featureValue = "+featureValue);
                 Integer count = tableDataMapper.getCount(featureValue,tableName,featureName);
                 validCount+=count;
                 discreteVo.setFrequent(count);
@@ -367,22 +368,28 @@ public class TableDataServiceImpl implements TableDataService {
 
 
 
-        // 创建任务
-        Task task = new Task();
-        task.setCreatetime(new Timestamp(System.currentTimeMillis()));
-        task.setDataset(tableName);
-        task.setFeature(featureName);
-        task.setLeader(UserThreadLocal.get().getUsername());
-        task.setTaskname("描述性分析");
-        // 获取关联疾病 TODO
-        // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
-        String label = categoryMapper.setParentLabelByLabel(tableName);
-        task.setDisease(label);
-        task.setRemark("指标描述性分析");
-        task.setResult(JSON.toJSONString(featureDescAnaVo));
-        task.setUserid(UserThreadLocal.get().getUid());
-        task.setTargetcolumn(featureName);
-        taskService.save(task);
+        //判断任务管理中是否有该任务，如果有就不在继续创建 没有就创建任务
+        List<Task> list = taskService.list(null);
+        List<Task> isRepeat = list.stream().filter(task -> {
+            return task.getTaskname().equals("描述性分析") && task.getFeature().equals(featureName) && task.getDataset().equals(tableName);
+        }).collect(Collectors.toList());
+        if(isRepeat == null || isRepeat.size() == 0){
+            Task task = new Task();
+            task.setCreatetime(new Timestamp(System.currentTimeMillis()));
+            task.setDataset(tableName);
+            task.setFeature(featureName);
+            task.setLeader(UserThreadLocal.get().getUsername());
+            task.setTaskname("描述性分析");
+            // 获取关联疾病 TODO
+            // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
+            String label = categoryMapper.getParentLabelByLabel(tableName);
+            task.setDisease(label);
+            task.setRemark("指标描述性分析");
+            task.setResult(JSON.toJSONString(featureDescAnaVo));
+            task.setUserid(UserThreadLocal.get().getUid());
+            task.setTargetcolumn(featureName);
+            taskService.save(task);
+        }
         return featureDescAnaVo;
     }
 
@@ -391,23 +398,30 @@ public class TableDataServiceImpl implements TableDataService {
         RunPyEntity param = new RunPyEntity(tableName,null,colNames);
         JsonNode jsonNode = HTTPUtils.postRequest(param, "/singleFactorAnalyze");
         SingleAnalyzeVo singleAnalyzeDataFromJsonNode = getSingleAnalyzeDataFromJsonNode(jsonNode);
-        // 创建任务
-        Task task = new Task();
-        task.setCreatetime(new Timestamp(System.currentTimeMillis()));
-        task.setDataset(tableName);
-        String featureNames = colNames.stream().collect(Collectors.joining(","));
-        task.setFeature(featureNames);
-        task.setLeader(UserThreadLocal.get().getUsername());
-        task.setTaskname("单因素分析");
-        // 获取关联疾病 TODO
-        // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
-        String label = categoryMapper.setParentLabelByLabel(tableName);
-        task.setDisease(label);
-        task.setRemark("指标单因素分析");
-        task.setResult(JSON.toJSONString(singleAnalyzeDataFromJsonNode));
-        task.setUserid(UserThreadLocal.get().getUid());
-        task.setTargetcolumn(colNames.get(0));
-        taskService.save(task);
+
+        List<Task> list = taskService.list(null);
+        List<Task> isRepeat = list.stream().filter(task -> {
+            return task.getTaskname().equals("单因素分析") && task.getFeature().equals(colNames.stream().collect(Collectors.joining(","))) && task.getDataset().equals(tableName);
+        }).collect(Collectors.toList());
+        if(isRepeat == null || isRepeat.size() == 0){
+            // 创建任务
+            Task task = new Task();
+            task.setCreatetime(new Timestamp(System.currentTimeMillis()));
+            task.setDataset(tableName);
+            String featureNames = colNames.stream().collect(Collectors.joining(","));
+            task.setFeature(featureNames);
+            task.setLeader(UserThreadLocal.get().getUsername());
+            task.setTaskname("单因素分析");
+            // 获取关联疾病 TODO
+            // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
+            String label = categoryMapper.getParentLabelByLabel(tableName);
+            task.setDisease(label);
+            task.setRemark("指标单因素分析");
+            task.setResult(JSON.toJSONString(singleAnalyzeDataFromJsonNode));
+            task.setUserid(UserThreadLocal.get().getUid());
+            task.setTargetcolumn(colNames.get(1));
+            taskService.save(task);
+        }
         return singleAnalyzeDataFromJsonNode;
     }
 
@@ -423,24 +437,37 @@ public class TableDataServiceImpl implements TableDataService {
         List<ICCVo> consistencyAnalyzeFromJsonNode = getConsistencyAnalyzeFromJsonNode(jsonNode);
         ConsistencyAnalyzeVo consistencyAnalyzeVo = new ConsistencyAnalyzeVo();
         consistencyAnalyzeVo.setICCAnalyzeResult(consistencyAnalyzeFromJsonNode);
-        // 创建任务
-        Task task = new Task();
-        task.setCreatetime(new Timestamp(System.currentTimeMillis()));
-        task.setDataset(tableName);
-        task.setFeature(featureName);
-        task.setLeader(UserThreadLocal.get().getUsername());
-        task.setTaskname("一致性验证");
-        // 获取关联疾病 TODO
-        // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
-        String label = categoryMapper.setParentLabelByLabel(tableName);
-        task.setDisease(label);
-        task.setRemark("指标一致性分析");
-        task.setResult(JSON.toJSONString(consistencyAnalyzeVo));
-        task.setUserid(UserThreadLocal.get().getUid());
-        task.setTargetcolumn(featureName);
-        taskService.save(task);
 
+        List<Task> list = taskService.list(null);
+        List<Task> isRepeat = list.stream().filter(task -> {
+            return task.getTaskname().equals("一致性验证") && task.getFeature().equals(featureName) && task.getDataset().equals(tableName);
+        }).collect(Collectors.toList());
+        if(isRepeat == null || isRepeat.size() == 0) {
+            // 创建任务
+            Task task = new Task();
+            task.setCreatetime(new Timestamp(System.currentTimeMillis()));
+            task.setDataset(tableName);
+            task.setFeature(featureName);
+            task.setLeader(UserThreadLocal.get().getUsername());
+            task.setTaskname("一致性验证");
+            // 获取关联疾病 TODO
+            // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
+            String label = categoryMapper.getParentLabelByLabel(tableName);
+            task.setDisease(label);
+            task.setRemark("指标一致性分析");
+            task.setModel("ICC");
+            task.setResult(JSON.toJSONString(consistencyAnalyzeVo));
+            task.setUserid(UserThreadLocal.get().getUid());
+            task.setTargetcolumn(featureName);
+            taskService.save(task);
+        }
         return consistencyAnalyzeVo;
+    }
+
+    @Override
+    public List<Map<String, Object>> getTableDataByFields(String tableName, List<String> featureList) {
+        List<Map<String, Object>> tableData = tableDataMapper.getTableDataByFields(tableName,featureList);
+        return tableData;
     }
 
     private List<ICCVo> getConsistencyAnalyzeFromJsonNode(JsonNode jsonNode){

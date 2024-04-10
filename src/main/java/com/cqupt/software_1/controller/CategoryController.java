@@ -38,6 +38,15 @@ public class CategoryController {
     // 创建一种新的疾病
     @PostMapping("/addDisease")
     public R addDisease(@RequestBody CategoryEntity categoryNode){
+        // 首先获取所有的已有疾病列表 判断是否重复
+        List<CategoryEntity> list = categoryService.list(null);
+        List<CategoryEntity> isRepeat = list.stream().filter(categoryEntity -> {
+            return categoryEntity.getLabel().equals(categoryNode.getLabel()) && categoryEntity.getIsDelete()==0;
+        }).collect(Collectors.toList());
+        if(isRepeat!=null && isRepeat.size()>0){
+            System.out.println("重复节点："+JSON.toJSONString(isRepeat));
+            return R.fail(300,"该疾病已存在！");
+        }
         categoryService.save(categoryNode);
         return R.success(200,"新增目录成功");
     }
@@ -51,8 +60,16 @@ public class CategoryController {
 
     @GetMapping("/addParentDisease")
     public R addParentDisease(@RequestParam("diseaseName") String diseaseName){
+        // 首先获取所有的已有疾病列表 判断是否重复
+        List<CategoryEntity> list = categoryService.list(null);
+        List<CategoryEntity> isRepeat = list.stream().filter(categoryEntity -> {
+            return categoryEntity.getLabel().equals(diseaseName) && categoryEntity.getIsDelete()==0;
+        }).collect(Collectors.toList());
+        if(isRepeat!=null && isRepeat.size()>0){
+            return R.fail(300,"该疾病已存在！");
+        }
         categoryService.addParentDisease(diseaseName);
-        return R.success("200",null);
+        return R.success(200,"新增疾病成功");
     }
 
     @GetMapping("/disease/all")

@@ -4,7 +4,6 @@ package com.cqupt.software_1.controller;
 import com.alibaba.fastjson.JSON;
 import com.cqupt.software_1.common.R;
 import com.cqupt.software_1.entity.IndicatorManageEntity;
-import com.cqupt.software_1.mapper.IndicatorManagementMapper;
 import com.cqupt.software_1.service.IndicatorManagementService;
 import com.cqupt.software_1.vo.DataFillMethodVo;
 import com.cqupt.software_1.vo.IndicatorsMissDataVo;
@@ -13,7 +12,7 @@ import com.cqupt.software_1.vo.IsFillVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.LinkedHashMap;
+
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +40,7 @@ public class IndicatorManagementController {
     // 跟据不同的算法进行数据补齐
     @PostMapping("/fillData")
     public R fillData(@RequestBody DataFillMethodVo dataFillMethodVo) {
+        System.out.println("参数为："+dataFillMethodVo);
         List<Map<String, IsFillVo>> list = indicatorManagementService.fillData(dataFillMethodVo);
         return R.success("200", list);
     }

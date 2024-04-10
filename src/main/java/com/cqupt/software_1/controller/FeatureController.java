@@ -8,11 +8,12 @@ import com.cqupt.software_1.Util.FieldStats;
 import com.cqupt.software_1.common.R;
 import com.cqupt.software_1.common.RunPyEntity;
 import com.cqupt.software_1.common.RunPyR;
+import com.cqupt.software_1.common.UserThreadLocal;
 import com.cqupt.software_1.entity.FieldManagementEntity;
 import com.cqupt.software_1.entity.TableManager;
-import com.cqupt.software_1.service.FieldManagementService;
-import com.cqupt.software_1.service.PageService;
-import com.cqupt.software_1.service.TableManagerService;
+import com.cqupt.software_1.entity.Task;
+import com.cqupt.software_1.mapper.CategoryMapper;
+import com.cqupt.software_1.service.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,13 +35,17 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @RestController
 @RequestMapping("/feature")
 public class FeatureController {
 
+    @Autowired
+    TaskService taskService;
 
     @Autowired
     private TableManagerService tableManagerService;
@@ -56,6 +61,8 @@ public class FeatureController {
     @Value("${pyPath}")
     private String pyPath;
 
+    @Autowired
+    CategoryMapper categoryMapper;
 
 
     /**
@@ -250,6 +257,29 @@ public class FeatureController {
         // 获取返回结果
         String responseBody = EntityUtils.toString(response.getEntity());
         JsonNode jsonNode = objectMapper.readValue(responseBody,JsonNode.class);
+        // 创建任务
+        List<Task> list = taskService.list(null);
+        List<String> runParams = runPyEntity.getRunParams();
+        String features = runParams.stream().collect(Collectors.joining(","));
+        List<Task> isRepeat = list.stream().filter(task -> {
+            return runPyEntity.getAiName().equals(task.getModel()) && task.getFeature().equals(features) && task.getDataset().equals(runPyEntity.getTableName());
+        }).collect(Collectors.toList());
+        if(isRepeat == null || isRepeat.size()==0){
+            // 创建任务
+            Task task = new Task();
+            task.setModel(runPyEntity.getAiName());
+            task.setDataset(runPyEntity.getTableName());
+            task.setTaskname("疾病特征表征");
+            task.setLeader(UserThreadLocal.get().getUsername());
+            task.setCreatetime(new Timestamp(System.currentTimeMillis()));
+            String label = categoryMapper.getParentLabelByLabel(runPyEntity.getTableName());
+            task.setDisease(label);
+            task.setRemark("疾病特征表征");
+            task.setUserid(UserThreadLocal.get().getUid());
+            task.setFeature(features);
+            task.setTargetcolumn(features);
+            taskService.save(task);
+        }
         return new RunPyR<>(200,"成功",jsonNode);
     }
 

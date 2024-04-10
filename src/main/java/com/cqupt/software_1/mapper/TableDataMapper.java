@@ -4,10 +4,7 @@ import com.cqupt.software_1.vo.CreateTableFeatureVo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 // TODO 公共模块新增类
 
@@ -34,4 +31,6 @@ public interface TableDataMapper {
     Integer getAllCount(@Param("tableName") String tableName);
 
     Integer getCount(@Param("featureValue") String featureValue, @Param("tableName") String tableName, @Param("featureName") String featureName);
+
+    List<Map<String, Object>> getTableDataByFields(@Param("tableName")String tableName, @Param("featureList") List<String> featureList);
 }

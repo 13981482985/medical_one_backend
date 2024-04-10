@@ -390,6 +390,13 @@
         <select id="getCount" resultType="java.lang.Integer">
                 select COUNT(*) FROM ${tableName} where "${featureName}"='${featureValue}'
         </select>
+    <select id="getTableDataByFields" resultType="java.util.Map">
+        select
+        <foreach collection="featureList" separator="," item="featureName">
+            "${featureName}"
+        </foreach>
+        from "${tableName}"
+    </select>
 
 
 </mapper>

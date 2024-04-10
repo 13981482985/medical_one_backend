@@ -1,17 +1,17 @@
 package com.cqupt.software_1.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cqupt.software_1.common.R;
 import com.cqupt.software_1.entity.FieldManagementEntity;
 import com.cqupt.software_1.service.FieldManagementService;
 import com.cqupt.software_1.vo.QueryFiledVO;
 import com.cqupt.software_1.vo.UpdateFiledVO;
+import com.sun.org.apache.bcel.internal.generic.ARETURN;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @RestController
@@ -46,6 +46,18 @@ public class FieldManagementController {
         // 更新字段表信息
         fieldManagementService.updateFieldsByDiseaseName(diseaseName, fields);
         return R.success(null);
+    }
+
+    // 根据表名获取所有字段
+    @GetMapping("/getAllFieldsByTableName")
+    public R getAllFieldsByTableName(@RequestParam("tableName") String tableName){
+        System.out.println("tableName: "+tableName);
+        List<FieldManagementEntity> list = fieldManagementService.list(new QueryWrapper<FieldManagementEntity>().eq("table_name", "copd"));// TODO 字段管理表没有完善 先写死的
+        List<String> featureList = list.stream().map(fieldManagementEntity -> {
+            return fieldManagementEntity.getFeatureName();
+        }).collect(Collectors.toList());
+        System.out.println("featureList:"+featureList);
+        return R.success("200",featureList);
     }
 
 }

@@ -1,5 +1,6 @@
 package com.cqupt.software_1.controller;
 
+import com.alibaba.fastjson.JSON;
 import com.cqupt.software_1.common.R;
 import com.cqupt.software_1.common.TaskRequest;
 import com.cqupt.software_1.entity.Task;
@@ -8,9 +9,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Required;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.util.StringUtils;
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -104,5 +107,15 @@ public class TaskController {
         taskService.deleteTask(id);
         return R.success(taskService.getTaskList());
     }
+
+    @GetMapping("/visualization")
+    public R visualizationTask(@RequestParam("tableName") String tableName, @RequestParam("selectDisease") String diseaseData) throws JsonProcessingException {
+        // 将 JSON 字符串转换为map对象
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> selectDiseaseMap = objectMapper.readValue(diseaseData, Map.class);
+        taskService.createVisualizationTask(tableName,selectDiseaseMap);
+        return R.success(200,"病人画像任务创建成功");
+    }
+
 
 }

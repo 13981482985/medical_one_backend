@@ -6,6 +6,7 @@ import com.cqupt.software_1.entity.AlgorithmUsageDailyStats;
 import com.cqupt.software_1.entity.Task;
 
 import java.util.List;
+import java.util.Map;
 
 public interface TaskService extends IService<Task> {
     List<AlgorithmUsageDailyStats> getAlgorithmUsageDailyStatsLast7Days();
@@ -18,4 +19,6 @@ public interface TaskService extends IService<Task> {
 
     void deleteTask(int id);
     List<String> getLeaderList();
+
+    void createVisualizationTask(String tableName, Map<String, Object> selectDiseaseMap);
 }
