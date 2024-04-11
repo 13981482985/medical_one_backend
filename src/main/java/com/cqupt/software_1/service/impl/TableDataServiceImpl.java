@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -314,7 +315,7 @@ public class TableDataServiceImpl implements TableDataService {
 
     // 对某个特征进行描述性分析
     @Override
-    public FeatureDescAnaVo featureDescAnalyze(String featureName, String tableName) throws IOException, URISyntaxException {
+    public FeatureDescAnaVo featureDescAnalyze(String featureName, String tableName,CreateTaskEntity taskInfo) throws IOException, URISyntaxException {
         // 判断这个特征属于离散还是非离散
         FeatureDescAnaVo featureDescAnaVo = new FeatureDescAnaVo();
         FieldManagementEntity featureEntity = fieldManagementService.getOne(new QueryWrapper<FieldManagementEntity>().eq("feature_name", featureName));
@@ -367,56 +368,79 @@ public class TableDataServiceImpl implements TableDataService {
         userLogService.save(userLog);
 
 
-
         //判断任务管理中是否有该任务，如果有就不在继续创建 没有就创建任务
         List<Task> list = taskService.list(null);
         List<Task> isRepeat = list.stream().filter(task -> {
-            return task.getTaskname().equals("描述性分析") && task.getFeature().equals(featureName) && task.getDataset().equals(tableName);
+            return "描述性分析".equals(task.getTasktype()) && task.getFeature().equals(featureName) && task.getDataset().equals(tableName) && task.getTaskname().equals(taskInfo.getTaskName());
         }).collect(Collectors.toList());
         if(isRepeat == null || isRepeat.size() == 0){
             Task task = new Task();
             task.setCreatetime(new Timestamp(System.currentTimeMillis()));
             task.setDataset(tableName);
             task.setFeature(featureName);
-            task.setLeader(UserThreadLocal.get().getUsername());
-            task.setTaskname("描述性分析");
+
+            String leader = taskInfo.getPrincipal();
+            if(leader == null || leader=="") {
+                leader = UserThreadLocal.get().getUsername();
+            }
+            task.setLeader(leader);
+
+            String taskName = taskInfo.getTaskName();
+            if(taskName == null || taskName=="") taskName = UserThreadLocal.get().getUsername()+"_"+"描述性分析_"+ LocalDate.now().toString();
+            task.setTaskname(taskName);
+            task.setParticipant(taskInfo.getParticipants());
+            task.setTasktype(taskInfo.getTasktype()==null?"描述性分析":taskInfo.getTasktype());
+
             // 获取关联疾病 TODO
             // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
             String label = categoryMapper.getParentLabelByLabel(tableName);
             task.setDisease(label);
-            task.setRemark("指标描述性分析");
+            task.setRemark(taskInfo.getTips());
+
             task.setResult(JSON.toJSONString(featureDescAnaVo));
             task.setUserid(UserThreadLocal.get().getUid());
             task.setTargetcolumn(featureName);
+            System.out.println("插入："+task);
             taskService.save(task);
         }
         return featureDescAnaVo;
     }
 
     @Override
-    public SingleAnalyzeVo singleFactorAnalyze(String tableName, List<String> colNames) throws IOException, URISyntaxException {
+    public SingleAnalyzeVo singleFactorAnalyze(String tableName, List<String> colNames,CreateTaskEntity taskInfo) throws IOException, URISyntaxException {
         RunPyEntity param = new RunPyEntity(tableName,null,colNames);
         JsonNode jsonNode = HTTPUtils.postRequest(param, "/singleFactorAnalyze");
         SingleAnalyzeVo singleAnalyzeDataFromJsonNode = getSingleAnalyzeDataFromJsonNode(jsonNode);
 
         List<Task> list = taskService.list(null);
         List<Task> isRepeat = list.stream().filter(task -> {
-            return task.getTaskname().equals("单因素分析") && task.getFeature().equals(colNames.stream().collect(Collectors.joining(","))) && task.getDataset().equals(tableName);
+            return task.getTasktype().equals("单因素分析") && task.getFeature().equals(colNames.stream().collect(Collectors.joining(","))) && task.getDataset().equals(tableName) && task.getTaskname().equals(taskInfo.getTaskName());
         }).collect(Collectors.toList());
         if(isRepeat == null || isRepeat.size() == 0){
             // 创建任务
+            System.err.println("开始创建任务");
             Task task = new Task();
             task.setCreatetime(new Timestamp(System.currentTimeMillis()));
             task.setDataset(tableName);
             String featureNames = colNames.stream().collect(Collectors.joining(","));
             task.setFeature(featureNames);
-            task.setLeader(UserThreadLocal.get().getUsername());
-            task.setTaskname("单因素分析");
+
+            String leader = taskInfo.getPrincipal();
+            if(leader == null || leader=="") {
+                leader = UserThreadLocal.get().getUsername();
+            }
+            task.setLeader(leader);
+            task.setRemark(taskInfo.getTips());
+            String taskName = taskInfo.getTaskName();
+            if(taskName == null || taskName=="") taskName = UserThreadLocal.get().getUsername()+"_"+"单因素分析_"+ LocalDate.now().toString();
+            task.setTaskname(taskName);
+            task.setParticipant(taskInfo.getParticipants());
+            task.setTasktype(taskInfo.getTasktype()==null?"单因素分析":taskInfo.getTasktype());
+
             // 获取关联疾病 TODO
             // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
             String label = categoryMapper.getParentLabelByLabel(tableName);
             task.setDisease(label);
-            task.setRemark("指标单因素分析");
             task.setResult(JSON.toJSONString(singleAnalyzeDataFromJsonNode));
             task.setUserid(UserThreadLocal.get().getUid());
             task.setTargetcolumn(colNames.get(1));

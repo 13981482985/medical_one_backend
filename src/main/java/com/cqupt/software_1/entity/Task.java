@@ -42,5 +42,6 @@ public class Task implements Serializable {
     private String dataset;
 
     private Integer userid;
+    private String tasktype;
 }
 

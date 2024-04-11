@@ -1,6 +1,7 @@
 package com.cqupt.software_1.entity;
 
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -21,4 +22,9 @@ public class TableDescribeEntity {
     private String createUser;
     private String createTime;
     private String classPath;
+
+    @TableField(exist = false)
+    private Integer colNumber;
+    @TableField(exist = false)
+    private Integer rowNumber;
 }

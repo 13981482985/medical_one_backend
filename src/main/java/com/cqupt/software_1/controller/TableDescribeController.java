@@ -22,6 +22,11 @@ public class TableDescribeController {
     @GetMapping("/tableDescribe")
     public R<TableDescribeEntity> getTableDescribe(@RequestParam("id") String id){ // 参数表的Id
         TableDescribeEntity tableDescribeEntity = tableDescribeService.getOne(new QueryWrapper<TableDescribeEntity>().eq("table_id", id));
+        // 根据表名获取字段数和行数
+        Integer colCount = tableDescribeService.getColCount(tableDescribeEntity.getTableName());
+        Integer rowCount = tableDescribeService.getRowCount(tableDescribeEntity.getTableName());
+        tableDescribeEntity.setRowNumber(rowCount);
+        tableDescribeEntity.setColNumber(colCount);
         System.out.println("数据为："+ JSON.toJSONString(tableDescribeEntity));
         return R.success("200",tableDescribeEntity);
     }

@@ -21,4 +21,6 @@ public interface TaskService extends IService<Task> {
     List<String> getLeaderList();
 
     void createVisualizationTask(String tableName, Map<String, Object> selectDiseaseMap);
+
+    Integer getTaskCountByTime(String timeStr);
 }

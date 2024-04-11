@@ -24,4 +24,5 @@ public interface TaskMapper extends BaseMapper<Task> {
     @Select("select distinct leader from \"taskmanage\"")
     List<String> getLeaderList();
 
+    Integer getTaskCountByTime(String timeStr);
 }

@@ -40,7 +40,7 @@ public class IndicatorManagementController {
     // 跟据不同的算法进行数据补齐
     @PostMapping("/fillData")
     public R fillData(@RequestBody DataFillMethodVo dataFillMethodVo) {
-        System.out.println("参数为："+dataFillMethodVo);
+        System.out.println("插补参数为："+dataFillMethodVo);
         List<Map<String, IsFillVo>> list = indicatorManagementService.fillData(dataFillMethodVo);
         return R.success("200", list);
     }

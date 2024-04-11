@@ -1,6 +1,7 @@
 package com.cqupt.software_1.service;
 
 import com.cqupt.software_1.entity.CategoryEntity;
+import com.cqupt.software_1.entity.CreateTaskEntity;
 import com.cqupt.software_1.vo.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,9 +24,9 @@ public interface TableDataService {
 
     List<String> exportFile(ExportFilledDataTableVo dataFillMethodVo) throws IOException;
 
-    FeatureDescAnaVo featureDescAnalyze(String featureName, String tableName) throws IOException, URISyntaxException;
+    FeatureDescAnaVo featureDescAnalyze(String featureName, String tableName, CreateTaskEntity createTaskEntity) throws IOException, URISyntaxException;
 
-    SingleAnalyzeVo singleFactorAnalyze(String tableName, List<String> colNames) throws IOException, URISyntaxException;
+    SingleAnalyzeVo singleFactorAnalyze(String tableName, List<String> colNames,CreateTaskEntity taskInfo) throws IOException, URISyntaxException;
 
     ConsistencyAnalyzeVo consistencyAnalyze(String tableName, String featureName) throws IOException, URISyntaxException;
 

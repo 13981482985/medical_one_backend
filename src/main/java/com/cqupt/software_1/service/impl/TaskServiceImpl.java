@@ -77,4 +77,9 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task>
         taskMapper.insert(task);
     }
 
+    @Override
+    public Integer getTaskCountByTime(String timeStr) {
+        return taskMapper.getTaskCountByTime(timeStr);
+    }
+
 }

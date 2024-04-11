@@ -63,6 +63,10 @@
     <select id="getlistbyId" resultType="com.cqupt.software_1.entity.Task">
         select * from "taskmanage" where  id = #{Id}
     </select>
+    <select id="getTaskCountByTime" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM "taskmanage"
+        WHERE "createtime" &lt;= CAST('${timeStr}' AS timestamp)
+    </select>
 
     <delete id="deleteTask">
         DELETE from "taskmanage" where id = #{id}

@@ -1,17 +1,22 @@
 package com.cqupt.software_1.controller;
 
 import com.alibaba.fastjson.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cqupt.software_1.common.R;
 import com.cqupt.software_1.common.TaskRequest;
 import com.cqupt.software_1.entity.Task;
 import com.cqupt.software_1.service.TaskService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.prism.shader.AlphaOne_Color_AlphaTest_Loader;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Required;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.util.StringUtils;
+
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -117,5 +122,39 @@ public class TaskController {
         return R.success(200,"病人画像任务创建成功");
     }
 
+    @GetMapping("/filterTask")
+    public R filterTaskList(@RequestParam(value = "disease",required = false) String disease,
+                            @RequestParam(value = "tasktype",required = false)String tasktype,
+                            @RequestParam(value = "leader",required = false)String leader){
+        if(disease!=null && tasktype!=null && leader!=null){
+            return R.success("200",taskService.list(new QueryWrapper<Task>().eq("disease",disease).eq("leader",leader).eq("tasktype",tasktype)));
+        }else if(disease==null && tasktype!=null && leader!=null){
+            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("leader",leader).eq("tasktype",tasktype)));
+        }else if(disease!=null && tasktype==null && leader!=null){
+            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("leader",leader).eq("disease",disease)));
+        }else if(disease!=null && tasktype!=null && leader==null){
+            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("tasktype",tasktype).eq("disease",disease)));
+        }else if(disease==null && tasktype!=null && leader==null){
+            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("tasktype",tasktype)));
+        }else if(disease==null && tasktype==null && leader!=null){
+            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("leader",leader)));
+        }else if(disease!=null && tasktype==null && leader==null){
+            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("disease",disease)));
+        }else{
+            return R.success("200" ,taskService.list(null));
+        }
+    }
 
+    @GetMapping("/staticTaskTrend")
+    public R staticTaskTrend(){
+        // 获取当期那时间前7天的数据量
+        LocalDate now = LocalDate.now();
+        Map<String,Integer> res = new HashMap<>();
+        for(int i=7; i>=0; i--){
+            LocalDate time = now.minusDays(i);
+            String timeStr = time.toString();
+            res.put(timeStr,taskService.getTaskCountByTime(timeStr));
+        }
+        return R.success("200",res);
+    }
 }

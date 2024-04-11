@@ -20,10 +20,12 @@ import com.cqupt.software_1.vo.DataFillMethodVo;
 import com.cqupt.software_1.vo.IndicatorsMissDataVo;
 import com.cqupt.software_1.vo.IsFillVo;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.poi.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -166,7 +168,7 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
 
             List<Task> list = taskMapper.selectList(null);
             List<Task> isRepeat = list.stream().filter(task -> {
-                return task.getTaskname().equals("缺失值补齐") && task.getFeature().equals(str) && task.getDataset().equals(dataFillMethodVo.getTableName()) && task.getModel().equals(models);
+                return "缺失值补齐".equals(task.getTasktype()) && task.getFeature().equals(str) && task.getDataset().equals(dataFillMethodVo.getTableName()) && task.getModel().equals(models) && task.getTaskname().equals(dataFillMethodVo.getNewTaskInfo().getTaskName());
             }).collect(Collectors.toList());
             if(isRepeat == null || isRepeat.size() == 0) {
                 // 创建任务模型
@@ -179,10 +181,19 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                 task.setFeature(str); //有哪些列
                 task.setTargetcolumn(str);
 
-                task.setLeader(UserThreadLocal.get().getUsername());
-
+                String leader = dataFillMethodVo.getNewTaskInfo().getPrincipal();
+                if(leader == null || leader=="") leader = UserThreadLocal.get().getUsername();
+                task.setLeader(leader);
                 task.setModel(models); // 每列的插补算法
-                task.setTaskname("缺失值补齐");
+
+                String taskName = dataFillMethodVo.getNewTaskInfo().getTaskName();
+                if( taskName == null|| taskName=="") taskName = UserThreadLocal.get().getUsername()+"_"+"缺失值补齐_"+ LocalDate.now().toString();
+                task.setTaskname(taskName);
+                task.setTasktype(dataFillMethodVo.getNewTaskInfo().getTasktype()==null?"缺失值补齐":dataFillMethodVo.getNewTaskInfo().getTasktype());
+
+                task.setParticipant(dataFillMethodVo.getNewTaskInfo().getParticipants());
+                task.setRemark(dataFillMethodVo.getNewTaskInfo().getTips());
+
                 // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
                 String label = categoryMapper.getParentLabelByLabel(dataFillMethodVo.getTableName());
                 task.setDisease(label);

@@ -4,11 +4,13 @@ import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cqupt.software_1.common.R;
 import com.cqupt.software_1.entity.CategoryEntity;
+import com.cqupt.software_1.entity.CreateTaskEntity;
 import com.cqupt.software_1.service.CategoryService;
 import com.cqupt.software_1.service.TableDataService;
 import com.cqupt.software_1.service.TableDescribeService;
 import com.cqupt.software_1.service.UserService;
 import com.cqupt.software_1.vo.*;
+import com.google.gson.Gson;
 import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -101,16 +103,23 @@ public class TableDataController {
 
     // TODO 列描述性分析
     @GetMapping("/tableDesAnalyze")
-    public R getDesTableData(@RequestParam("featureName") String featureName, @RequestParam("tableName") String tableName) throws IOException, URISyntaxException {
-        FeatureDescAnaVo featureDescAnaVo =  tableDataService.featureDescAnalyze(featureName,tableName);
+    public R getDesTableData(@RequestParam("featureName") String featureName, @RequestParam("tableName") String tableName, @RequestParam(value = "taskInfo",required = false) String taskInfo) throws IOException, URISyntaxException {
+        // 将JSON转成对象
+        Gson gson = new Gson();
+        CreateTaskEntity createTaskEntity = gson.fromJson(taskInfo, CreateTaskEntity.class);
+        System.out.println("参数："+createTaskEntity);
+        FeatureDescAnaVo featureDescAnaVo =  tableDataService.featureDescAnalyze(featureName,tableName,createTaskEntity);
         return R.success("200",featureDescAnaVo);
     }
 
     // TODO 单因素分析
     @GetMapping("/singleFactorAnalyze")
-    public R getSingleFactorAnalyze(@RequestParam("tableName") String tableName, @RequestParam("colNames") List<String> colNames) throws IOException, URISyntaxException {
+    public R getSingleFactorAnalyze(@RequestParam("tableName") String tableName, @RequestParam("colNames") List<String> colNames,@RequestParam(value = "taskInfo",required = false)String taskInfo) throws IOException, URISyntaxException {
         System.out.println("表名："+tableName+" 列表："+colNames);
-        SingleAnalyzeVo singleAnalyzeVo = tableDataService.singleFactorAnalyze(tableName,colNames);
+        Gson gson = new Gson();
+        CreateTaskEntity createTaskEntity = gson.fromJson(taskInfo, CreateTaskEntity.class);
+        System.err.println("createTaskEntity"+createTaskEntity);
+        SingleAnalyzeVo singleAnalyzeVo = tableDataService.singleFactorAnalyze(tableName,colNames,createTaskEntity);
         return R.success("200",singleAnalyzeVo);
     }
 

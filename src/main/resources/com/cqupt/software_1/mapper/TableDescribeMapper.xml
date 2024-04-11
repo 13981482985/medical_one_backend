@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cqupt.software_1.mapper.TableDescribeMapper">
+    <select id="getRowCount" resultType="java.lang.Integer">
+        select COUNT(*) from "${tableName}";
+    </select>
+    <select id="getColCount" resultType="java.lang.Integer">
+        SELECT count(*) FROM information_schema.columns WHERE table_name = '${tableName}';
+    </select>
+</mapper>
