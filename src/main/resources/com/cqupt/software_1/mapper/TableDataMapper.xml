@@ -38,8 +38,16 @@
                         )
                 </foreach>
         </insert>
+    <insert id="batchInsertCsv">
+        insert into "${tableName}" values
+            <foreach collection="csvData" separator="," item="row">
+                <foreach collection="row" separator="," item="colData" open="(" close=")">
+                    '${colData}'
+                </foreach>
+            </foreach>
+    </insert>
 
-        <update id="createTable">
+    <update id="createTable">
         create table "${tableName}" (
         <foreach collection="headers" item="columnName" separator=",">
             "${columnName}" VARCHAR(255)
@@ -396,6 +404,9 @@
             "${featureName}"
         </foreach>
         from "${tableName}"
+    </select>
+    <select id="getCountByName" resultType="java.lang.Integer">
+        select COUNT(*) from "${tableName}";
     </select>
 
 

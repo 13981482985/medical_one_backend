@@ -52,11 +52,13 @@ public class FieldManagementController {
     @GetMapping("/getAllFieldsByTableName")
     public R getAllFieldsByTableName(@RequestParam("tableName") String tableName){
         System.out.println("tableName: "+tableName);
-        List<FieldManagementEntity> list = fieldManagementService.list(new QueryWrapper<FieldManagementEntity>().eq("table_name", "copd"));// TODO 字段管理表没有完善 先写死的
+//        List<FieldManagementEntity> list = fieldManagementService.list(new QueryWrapper<FieldManagementEntity>().eq("table_name", "copd"));// TODO 字段管理表没有完善 先写死的
+        List<FieldManagementEntity> list = fieldManagementService.list(null);
         List<String> featureList = list.stream().map(fieldManagementEntity -> {
             return fieldManagementEntity.getFeatureName();
+//            return fieldManagementEntity.getChName();
         }).collect(Collectors.toList());
-        System.out.println("featureList:"+featureList);
+        System.out.println("列表数据有："+featureList);
         return R.success("200",featureList);
     }
 

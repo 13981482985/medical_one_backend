@@ -1,5 +1,6 @@
 package com.cqupt.software_1.service.impl;
 
+import com.cqupt.software_1.entity.StaticData;
 import com.cqupt.software_1.mapper.StatisticalDataMapper;
 import com.cqupt.software_1.service.StatisticaldService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,12 +23,18 @@ public class StatisticaldDataImpl implements StatisticaldService {
 
     @Override
     public Map<String,Object> getStatisticaldData() {
-
+        // 从缓存中获取数据
+        List<StaticData> staticData = statisticaldDataMapper.getStaticData();
+        if(staticData!=null && staticData.size()>0){
+            HashMap<String, Object> resMap = new HashMap<>();
+            resMap.put("数据总量" , staticData.get(0).getAllCount());
+            resMap.put("指标总量" , staticData.get(0).getAllIndex());
+            resMap.put("总体缺失率", staticData.get(0).getAllMissRate());
+            resMap.put("总体有效率", staticData.get(0).getAllValidRate());
+            return resMap;
+        }
         // 查询到数据库的所有的表名
         List<String> tableNames = statisticaldDataMapper.getAllTableNameOfDataBase();
-        for (String tableName : tableNames) {
-            System.out.println(tableName);
-        }
 
         Map<String ,Object> resMap = new HashMap<>();
 
@@ -40,13 +47,13 @@ public class StatisticaldDataImpl implements StatisticaldService {
 
         for (String tableName : tableNames) {
 
-            Long row = statisticaldDataMapper.getCount(tableName);
+            Long row = statisticaldDataMapper.getCount(tableName); // 表有多少行
 
-            Long column = statisticaldDataMapper.getColumn(tableName);
+            Long column = statisticaldDataMapper.getColumn(tableName); // 表有多少列
             // 计算每个表的缺失总数
-            int missNum = calculatorMissRate4Table(tableName);
-            missCount += missNum;
+            int missNum = calculatorMissRate4Table(tableName); // 表的缺失数
 
+            missCount += missNum;
             rowCount += row;
             columnCount +=  column;
         }
@@ -60,8 +67,11 @@ public class StatisticaldDataImpl implements StatisticaldService {
         resMap.put("指标总量" , columnCount);
         resMap.put("总体缺失率", decimalFormat.format(missRateTotal));
         resMap.put("总体有效率", decimalFormat.format(1 - missRateTotal));
+        // 保存到缓存
+        StaticData cacheData = new StaticData(rowCount,columnCount,Float.parseFloat(decimalFormat.format(missRateTotal)),Float.parseFloat(decimalFormat.format(1 - missRateTotal)));
 
-
+        // 将数据保存到缓存中
+        statisticaldDataMapper.saveCache(cacheData);
         return resMap;
     }
 

@@ -6,6 +6,7 @@ import com.cqupt.software_1.common.RunPyEntity;
 import com.cqupt.software_1.common.UserThreadLocal;
 import com.cqupt.software_1.entity.*;
 import com.cqupt.software_1.mapper.CategoryMapper;
+import com.cqupt.software_1.mapper.StatisticalDataMapper;
 import com.cqupt.software_1.mapper.TableDataMapper;
 import com.cqupt.software_1.mapper.TableDescribeMapper;
 import com.cqupt.software_1.service.*;
@@ -15,9 +16,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
@@ -27,12 +32,19 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 // TODO 公共模块
 
 @Service
 public class TableDataServiceImpl implements TableDataService {
+    private volatile boolean hasError = false;
+
+    @Autowired
+    ThreadPoolTaskExecutor taskExecutor;
+    @Autowired
+    DataSourceTransactionManager transactionManager;
 
     @Autowired
     TableDataMapper tableDataMapper;
@@ -49,6 +61,9 @@ public class TableDataServiceImpl implements TableDataService {
 
     @Autowired
     FieldManagementService fieldManagementService;
+
+    @Autowired
+    StatisticalDataMapper statisticalDataMapper;
 
     @Autowired
     IndicatorManagementService indicatorManagementService;
@@ -89,6 +104,8 @@ public class TableDataServiceImpl implements TableDataService {
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"数据文件上传");
         userLogService.save(userLog);
 
+        statisticalDataMapper.deleteCache(); // 清除缓存
+
         return featureList;
     }
 
@@ -127,7 +144,7 @@ public class TableDataServiceImpl implements TableDataService {
         List<FieldManagementEntity> fields = fieldManagementService.list(null);
         HashMap<String, String> fieldMap = new HashMap<>();
         for (FieldManagementEntity field : fields) {
-            fieldMap.put(field.getFeatureName(),field.getUnit());
+            fieldMap.put(field.getFeatureName(),field.getType());
         }
         // TODO 创建表头信息
         tableDataMapper.createTableByField(tableName,fieldMap);
@@ -174,6 +191,7 @@ public class TableDataServiceImpl implements TableDataService {
         tableDescribeMapper.insert(tableDescribeEntity);
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"筛选数据建表");
         userLogService.save(userLog);
+        statisticalDataMapper.deleteCache(); // 清除数据统计的缓存
 
     }
 
@@ -214,8 +232,8 @@ public class TableDataServiceImpl implements TableDataService {
         }
         // 处理varchar类型的数据
         for (CreateTableFeatureVo createTableFeatureVo : characterList) {
-            System.out.println("当前字段的类型："+createTableFeatureVo.getUnit());
-            if(createTableFeatureVo.getUnit()==null || createTableFeatureVo.getUnit().equals("character varying")){
+            System.out.println("当前字段的类型："+createTableFeatureVo.getType());
+            if(createTableFeatureVo.getType()==null || createTableFeatureVo.getType().equals("character varying")){
                 createTableFeatureVo.setValue("'"+createTableFeatureVo.getValue()+"'");
             }
         }
@@ -252,11 +270,57 @@ public class TableDataServiceImpl implements TableDataService {
             // 删除表头行，剩余的即为数据行
             csvData.remove(0);
             // 创建表信息
-            tableDataMapper.createTable(headers,tableName);
-            // 保存表头信息和表数据到数据库中
-            for (String[] row : csvData) { // 以此保存每行信息到数据库中
-                tableDataMapper.insertRow(row,tableName);
+            tableDataMapper.createTable(headers, tableName);
+            System.err.println("表头创建成功！！！！！！！！！！！！！");
+
+//            // 批量
+            // TODO 分批插入 防止sql参数传入过多导致溢出
+            if(csvData.size()>10000){
+                int batch = csvData.size()/10000;
+                for(int i=0; i<batch; i++){
+                    int start = i*10000, end = (i+1)*10000;
+                    tableDataMapper.batchInsertCsv(csvData.subList(start,end),tableName); // diseaseData.subList(start,end) 前闭后开
+                }
+                tableDataMapper.batchInsertCsv(csvData.subList(batch*10000,csvData.size()),tableName);
+            }else{
+                tableDataMapper.batchInsertCsv(csvData,tableName);
             }
+            // TODO 改进
+//            int count = csvData.size();
+//            int pageSize = 5000;
+//            int threadNum = count % pageSize == 0 ?  count / pageSize:  count / pageSize + 1;
+//            CountDownLatch downLatch = new CountDownLatch(threadNum);
+//            long start = System.currentTimeMillis();
+//
+//            for (int i = 0; i < threadNum; i++) {
+//                //开始序号
+//                int startIndex = i * pageSize;
+//                //结束序号
+//                int endIndex = Math.min(count, (i+1)*pageSize);
+//                //分割list
+//                List<String[]> epochData = csvData.subList(startIndex, endIndex);
+//
+//                taskExecutor.execute(() -> {
+//                    try {
+//                        tableDataMapper.batchInsertCsv(epochData,tableName);
+//
+//                    }catch (Exception e){
+//                        e.printStackTrace();
+//                    }finally {
+//                        //执行完后 计数
+//                        downLatch.countDown(); // 计数器减1
+//                    }
+//                });
+//            }
+//            try {
+//                //等待
+//                downLatch.await(); //等待所有的线程执行结束 当里面的数值变为0的时候主线程就不在等待
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//            long end = System.currentTimeMillis();
+//            System.out.println("插入数据耗费时间："+(end-start));
+
         }
         return featureList;
     }
@@ -339,6 +403,7 @@ public class TableDataServiceImpl implements TableDataService {
             String s = featureEntity.getRange().replace("{", "").replace("}", "");
             System.out.println("值为："+s);
             String[] featureValues = s.split(",");
+            System.out.println("分类情况为："+featureValues);
             ArrayList<DiscreteVo> discreteVos = new ArrayList<>();
             // 获取数据总条数
             Integer totalCount = tableDataMapper.getAllCount(tableName);
@@ -346,7 +411,6 @@ public class TableDataServiceImpl implements TableDataService {
             for (String featureValue : featureValues) {
                 DiscreteVo discreteVo = new DiscreteVo();
                 // 计算每个取值的数据总条数
-
                 featureValue = featureValue.trim().replace("\"", "");
                 System.out.println("featureValue = "+featureValue);
                 Integer count = tableDataMapper.getCount(featureValue,tableName,featureName);
@@ -354,8 +418,8 @@ public class TableDataServiceImpl implements TableDataService {
                 discreteVo.setFrequent(count);
                 discreteVo.setTotalAmount(Float.parseFloat(String.format("%.2f",(float)count/totalCount*100))); // 累计占比
                 discreteVo.setVariable(featureValue);
-
                 discreteVos.add(discreteVo);
+                System.err.println("当前离散vo:"+discreteVo);
             }
             for (DiscreteVo discreteVo : discreteVos) {
                 discreteVo.setAmount(Float.parseFloat(String.format("%.2f",(float)discreteVo.getFrequent()/validCount*100))); // 有效值占比
@@ -381,12 +445,16 @@ public class TableDataServiceImpl implements TableDataService {
 
             String leader = taskInfo.getPrincipal();
             if(leader == null || leader=="") {
+                System.out.println("操作人为空");
                 leader = UserThreadLocal.get().getUsername();
             }
             task.setLeader(leader);
 
             String taskName = taskInfo.getTaskName();
-            if(taskName == null || taskName=="") taskName = UserThreadLocal.get().getUsername()+"_"+"描述性分析_"+ LocalDate.now().toString();
+            if(taskName == null || taskName=="") {
+                System.out.println("任务名称为空");
+                taskName = UserThreadLocal.get().getUsername()+"_"+"描述性分析_"+ LocalDate.now().toString();
+            }
             task.setTaskname(taskName);
             task.setParticipant(taskInfo.getParticipants());
             task.setTasktype(taskInfo.getTasktype()==null?"描述性分析":taskInfo.getTasktype());
@@ -451,7 +519,7 @@ public class TableDataServiceImpl implements TableDataService {
 
     // TODO 一致性验证
     @Override
-    public ConsistencyAnalyzeVo consistencyAnalyze(String tableName, String featureName) throws IOException, URISyntaxException {
+    public ConsistencyAnalyzeVo consistencyAnalyze(String tableName, String featureName,CreateTaskEntity taskInfo) throws IOException, URISyntaxException {
         ArrayList<String> featureNames = new ArrayList<>();
         featureNames.add(featureName);
         RunPyEntity param = new RunPyEntity(tableName,null,featureNames);
@@ -464,7 +532,7 @@ public class TableDataServiceImpl implements TableDataService {
 
         List<Task> list = taskService.list(null);
         List<Task> isRepeat = list.stream().filter(task -> {
-            return task.getTaskname().equals("一致性验证") && task.getFeature().equals(featureName) && task.getDataset().equals(tableName);
+            return task.getTasktype().equals("一致性验证") && task.getFeature().equals(featureName) && task.getDataset().equals(tableName)&&task.getTaskname().equals(taskInfo.getTaskName());
         }).collect(Collectors.toList());
         if(isRepeat == null || isRepeat.size() == 0) {
             // 创建任务
@@ -472,17 +540,28 @@ public class TableDataServiceImpl implements TableDataService {
             task.setCreatetime(new Timestamp(System.currentTimeMillis()));
             task.setDataset(tableName);
             task.setFeature(featureName);
-            task.setLeader(UserThreadLocal.get().getUsername());
-            task.setTaskname("一致性验证");
+
+            String leader = taskInfo.getPrincipal();
+            if(leader == null || leader=="") {
+                leader = UserThreadLocal.get().getUsername();
+            }
+            task.setLeader(leader);
+            task.setRemark(taskInfo.getTips());
+            String taskName = taskInfo.getTaskName();
+            if(taskName == null || taskName=="") taskName = UserThreadLocal.get().getUsername()+"_"+"一致性验证_"+ LocalDate.now().toString();
+            task.setTaskname(taskName);
+            task.setParticipant(taskInfo.getParticipants());
+            task.setTasktype(taskInfo.getTasktype()==null?"一致性验证":taskInfo.getTasktype());
+
             // 获取关联疾病 TODO
             // 跟据表名获取父节点的名称 select label from category where "id"=(select parent_id from category where label='copd')
             String label = categoryMapper.getParentLabelByLabel(tableName);
             task.setDisease(label);
-            task.setRemark("指标一致性分析");
             task.setModel("ICC");
             task.setResult(JSON.toJSONString(consistencyAnalyzeVo));
             task.setUserid(UserThreadLocal.get().getUid());
             task.setTargetcolumn(featureName);
+            System.err.println("保存任务信息："+task);
             taskService.save(task);
         }
         return consistencyAnalyzeVo;
@@ -492,6 +571,15 @@ public class TableDataServiceImpl implements TableDataService {
     public List<Map<String, Object>> getTableDataByFields(String tableName, List<String> featureList) {
         List<Map<String, Object>> tableData = tableDataMapper.getTableDataByFields(tableName,featureList);
         return tableData;
+    }
+
+    @Override
+    public Integer getDataCount(List<CategoryEntity> categoryEntities) {
+        int count = 0;
+        for (CategoryEntity categoryEntity : categoryEntities) {
+            count+=tableDataMapper.getCountByName(categoryEntity.getLabel());
+        }
+        return count;
     }
 
     private List<ICCVo> getConsistencyAnalyzeFromJsonNode(JsonNode jsonNode){

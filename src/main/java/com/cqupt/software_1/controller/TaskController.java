@@ -4,10 +4,12 @@ import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cqupt.software_1.common.R;
 import com.cqupt.software_1.common.TaskRequest;
+import com.cqupt.software_1.entity.CreateTaskEntity;
 import com.cqupt.software_1.entity.Task;
 import com.cqupt.software_1.service.TaskService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 import com.sun.prism.shader.AlphaOne_Color_AlphaTest_Loader;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -114,34 +116,53 @@ public class TaskController {
     }
 
     @GetMapping("/visualization")
-    public R visualizationTask(@RequestParam("tableName") String tableName, @RequestParam("selectDisease") String diseaseData) throws JsonProcessingException {
+    public R visualizationTask(@RequestParam("tableName") String tableName, @RequestParam("selectDisease") String diseaseData,@RequestParam(value = "taskInfo",required = false) String taskInfo) throws JsonProcessingException {
         // 将 JSON 字符串转换为map对象
         ObjectMapper objectMapper = new ObjectMapper();
+        CreateTaskEntity createTaskEntity = new Gson().fromJson(taskInfo, CreateTaskEntity.class);
         Map<String, Object> selectDiseaseMap = objectMapper.readValue(diseaseData, Map.class);
-        taskService.createVisualizationTask(tableName,selectDiseaseMap);
+        taskService.createVisualizationTask(tableName,selectDiseaseMap,createTaskEntity);
         return R.success(200,"病人画像任务创建成功");
     }
 
-    @GetMapping("/filterTask")
+    @GetMapping("/addRepresentTask")
+    public R addRepresentTask(@RequestParam("tableName") String tableName, @RequestParam("colNames")List<String> colNames,@RequestParam("model") String model, @RequestParam("taskInfo")String taskInfo){
+        CreateTaskEntity createTaskEntity = new Gson().fromJson(taskInfo, CreateTaskEntity.class);
+        taskService.addRepresentTask(tableName,colNames,model,createTaskEntity);
+        return R.success(200,"特征表征任务创建成功");
+    }
+
+    @GetMapping("/filterTaskBypage")
     public R filterTaskList(@RequestParam(value = "disease",required = false) String disease,
                             @RequestParam(value = "tasktype",required = false)String tasktype,
-                            @RequestParam(value = "leader",required = false)String leader){
+                            @RequestParam(value = "leader",required = false)String leader,
+                            @RequestParam(value = "newPage",required = false)Integer newPage,
+                            @RequestParam(value = "pageSize",required = false) Integer pageSize){
+        System.out.println("参数为："+disease + tasktype + leader+newPage+pageSize);
+        List<Task> tasks = filterTask(disease, tasktype, leader);
+        int start = (newPage-1)*pageSize;
+        int end = newPage*pageSize;
+        if(tasks.size()<end) return R.success(tasks.subList(start,tasks.size()));
+        else return R.success(tasks.subList(start,end));
+    }
+
+    public List<Task> filterTask(String disease,String tasktype,String leader){
         if(disease!=null && tasktype!=null && leader!=null){
-            return R.success("200",taskService.list(new QueryWrapper<Task>().eq("disease",disease).eq("leader",leader).eq("tasktype",tasktype)));
+            return taskService.list(new QueryWrapper<Task>().eq("disease",disease).eq("leader",leader).eq("tasktype",tasktype));
         }else if(disease==null && tasktype!=null && leader!=null){
-            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("leader",leader).eq("tasktype",tasktype)));
+            return taskService.list(new QueryWrapper<Task>().eq("leader",leader).eq("tasktype",tasktype));
         }else if(disease!=null && tasktype==null && leader!=null){
-            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("leader",leader).eq("disease",disease)));
+            return taskService.list(new QueryWrapper<Task>().eq("leader",leader).eq("disease",disease));
         }else if(disease!=null && tasktype!=null && leader==null){
-            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("tasktype",tasktype).eq("disease",disease)));
+            return taskService.list(new QueryWrapper<Task>().eq("tasktype",tasktype).eq("disease",disease));
         }else if(disease==null && tasktype!=null && leader==null){
-            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("tasktype",tasktype)));
+            return taskService.list(new QueryWrapper<Task>().eq("tasktype",tasktype));
         }else if(disease==null && tasktype==null && leader!=null){
-            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("leader",leader)));
+            return taskService.list(new QueryWrapper<Task>().eq("leader",leader));
         }else if(disease!=null && tasktype==null && leader==null){
-            return R.success("200" ,taskService.list(new QueryWrapper<Task>().eq("disease",disease)));
+            return taskService.list(new QueryWrapper<Task>().eq("disease",disease));
         }else{
-            return R.success("200" ,taskService.list(null));
+            return taskService.list(null);
         }
     }
 
@@ -157,4 +178,12 @@ public class TaskController {
         }
         return R.success("200",res);
     }
+
+    @GetMapping("getTaskNumber")
+    public R getTaskNumber(String disease,String tasktype,String leader){
+        int size = filterTask(disease,tasktype,leader).size();
+        return R.success("200",size);
+    }
+
+
 }

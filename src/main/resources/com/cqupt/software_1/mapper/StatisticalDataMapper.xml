@@ -3,6 +3,12 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cqupt.software_1.mapper.StatisticalDataMapper">
+    <insert id="saveCache" parameterType="com.cqupt.software_1.entity.StaticData">
+        insert into "static_data" (all_count, all_index, all_miss_rate,all_valid_rate) values ('${allCount}','${allIndex}','${allMissRate}','${allValidRate}')
+    </insert>
+    <delete id="deleteCache">
+        delete from "static_data";
+    </delete>
 
     <select id="getAllTableNameOfDataBase" resultType="java.lang.String">
 
@@ -41,5 +47,8 @@
         SELECT COUNT(*)
         FROM table_info
         WHERE create_time &lt;= CAST(#{dateParam} AS timestamp)
+    </select>
+    <select id="getStaticData" resultType="com.cqupt.software_1.entity.StaticData">
+        select * from "static_data";
     </select>
 </mapper>

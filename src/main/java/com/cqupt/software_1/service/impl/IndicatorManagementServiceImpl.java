@@ -20,7 +20,6 @@ import com.cqupt.software_1.vo.DataFillMethodVo;
 import com.cqupt.software_1.vo.IndicatorsMissDataVo;
 import com.cqupt.software_1.vo.IsFillVo;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.poi.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -61,7 +60,7 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
             indicatorManageEntity.setFeatureName(fieldManagementEntity.getFeatureName());
             indicatorManageEntity.setLabel(fieldManagementEntity.getChName());
             indicatorManageEntity.setDiscrete(fieldManagementEntity.getDiscrete());
-            if(fieldManagementEntity.getUnit()!=null && !fieldManagementEntity.getUnit().equals("character varying")) {
+            if(fieldManagementEntity.getType()!=null && !fieldManagementEntity.getType().equals("character varying")) {
                 if(fieldManagementEntity.getDiscrete()!=null && fieldManagementEntity.getDiscrete()) {
                     indicatorManageEntity.setFeatureDataType(2); // 数字离散
                     indicatorManageEntity.setMissCompleteMethod("前向填充");
@@ -76,13 +75,14 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                     indicatorManageEntity.setMissCompleteMethod("前向填充");
                 }else continue; // 文本非离散 无法分析
             }
-            if(fieldManagementEntity.getIsDemography()) {
+            System.err.println("当前列信息为；"+fieldManagementEntity);
+            if(fieldManagementEntity.getPopulation()) {
                 indicatorManageEntity.setType("diagnosis");
                 indicatorManageEntity.setTypeCh("人口学指标");
-            }else if(fieldManagementEntity.getIsPhysiological()){
+            }else if(fieldManagementEntity.getPhysiology()){
                 indicatorManageEntity.setType("vital_sign");
                 indicatorManageEntity.setTypeCh("生理学指标");
-            }else if(fieldManagementEntity.getIsSociology()){
+            }else if(fieldManagementEntity.getSociety()){
                 indicatorManageEntity.setType("pathology");
                 indicatorManageEntity.setTypeCh("社会学指标");
             }else{
@@ -113,6 +113,7 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
 
     @Override
     public List<Map<String,IsFillVo>> fillData(DataFillMethodVo dataFillMethodVo) {
+        System.out.println("缺失值补齐任务参数测试："+dataFillMethodVo.getNewTaskInfo());
         List<IndicatorsMissDataVo> missCompleteMethod = dataFillMethodVo.getMissCompleteMethod();
         List<Map<String,IsFillVo>> res = new ArrayList<>();
         List<List<IsFillVo>> tempRes = new ArrayList<>();
@@ -168,9 +169,11 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
 
             List<Task> list = taskMapper.selectList(null);
             List<Task> isRepeat = list.stream().filter(task -> {
-                return "缺失值补齐".equals(task.getTasktype()) && task.getFeature().equals(str) && task.getDataset().equals(dataFillMethodVo.getTableName()) && task.getModel().equals(models) && task.getTaskname().equals(dataFillMethodVo.getNewTaskInfo().getTaskName());
+
+                return "缺失值补齐".equals(task.getTasktype()) && task.getFeature().equals(str) && task.getDataset().equals(dataFillMethodVo.getTableName()) && task.getTaskname().equals(dataFillMethodVo.getNewTaskInfo().getTaskName());
             }).collect(Collectors.toList());
             if(isRepeat == null || isRepeat.size() == 0) {
+                System.err.println("开始创建缺失值补齐任务了！");
                 // 创建任务模型
                 Task task = new Task();
                 // 获取当前时间的 LocalDateTime 对象
@@ -198,7 +201,6 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                 String label = categoryMapper.getParentLabelByLabel(dataFillMethodVo.getTableName());
                 task.setDisease(label);
                 task.setUserid(UserThreadLocal.get().getUid());
-                task.setLeader(UserThreadLocal.get().getUsername());
                 taskMapper.insert(task);
             }
 

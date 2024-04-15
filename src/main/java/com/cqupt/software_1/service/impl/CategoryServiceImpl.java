@@ -35,18 +35,21 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, CategoryEnt
         List<CategoryEntity> categoryEntities = dataManagerMapper.selectList(null);
         // 获取所有级结构
         List<CategoryEntity> treeData = categoryEntities.stream().filter((categoryEntity) -> {
-            return categoryEntity.getParentId().equals("0") && categoryEntity.getIsDelete()==0;
+            return categoryEntity.getParentId().equals("0") && categoryEntity.getIsDelete()==0 && categoryEntity.getCatLevel()==1;
         }).map((level1Cat) -> {
             level1Cat.setChildren(getCatChildren(level1Cat, categoryEntities));;
             return level1Cat;
         }).collect(Collectors.toList());
-        List<CategoryEntity> publicData = treeData.stream().filter(categoryEntity -> {
-            return categoryEntity.getLabel().equals("公共数据集");
-        }).collect(Collectors.toList());
-        if(publicData!=null && publicData.size()>0){
-            treeData.remove(publicData.get(0));
-            treeData.add(publicData.get(0));
+
+        CategoryEntity pu = null;
+        for (CategoryEntity notPublicDatum : treeData) {
+            if(notPublicDatum.getIsCommon()==1) pu = notPublicDatum;
         }
+        if(pu!=null){
+            treeData.remove(pu);
+            treeData.add(pu);
+        }
+        System.out.println("返回数据为："+treeData);
         return treeData;
     }
 

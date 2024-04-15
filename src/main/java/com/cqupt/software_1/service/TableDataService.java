@@ -28,7 +28,9 @@ public interface TableDataService {
 
     SingleAnalyzeVo singleFactorAnalyze(String tableName, List<String> colNames,CreateTaskEntity taskInfo) throws IOException, URISyntaxException;
 
-    ConsistencyAnalyzeVo consistencyAnalyze(String tableName, String featureName) throws IOException, URISyntaxException;
+    ConsistencyAnalyzeVo consistencyAnalyze(String tableName, String featureName,CreateTaskEntity taskInfo) throws IOException, URISyntaxException;
 
     List<Map<String, Object>> getTableDataByFields(String tableName, List<String> featureList);
+
+    Integer getDataCount(List<CategoryEntity> categoryEntities);
 }

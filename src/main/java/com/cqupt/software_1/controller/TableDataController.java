@@ -16,13 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 // TODO 公共模块新增类
 
@@ -107,7 +106,7 @@ public class TableDataController {
         // 将JSON转成对象
         Gson gson = new Gson();
         CreateTaskEntity createTaskEntity = gson.fromJson(taskInfo, CreateTaskEntity.class);
-        System.out.println("参数："+createTaskEntity);
+        System.err.println("描述性分析任务参数："+createTaskEntity);
         FeatureDescAnaVo featureDescAnaVo =  tableDataService.featureDescAnalyze(featureName,tableName,createTaskEntity);
         return R.success("200",featureDescAnaVo);
     }
@@ -125,8 +124,10 @@ public class TableDataController {
 
     // TODO 一致性验证
     @GetMapping("/consistencyAnalyze")
-    public R getConsistencyAnalyze(@RequestParam("tableName") String tableName, @RequestParam("featureName") String featureName) throws IOException, URISyntaxException {
-        ConsistencyAnalyzeVo consistencyAnalyze = tableDataService.consistencyAnalyze(tableName,featureName);
+    public R getConsistencyAnalyze(@RequestParam("tableName") String tableName, @RequestParam("featureName") String featureName,@RequestParam(value = "taskInfo",required = false)String taskInfo) throws IOException, URISyntaxException {
+        CreateTaskEntity createTaskEntity = new Gson().fromJson(taskInfo, CreateTaskEntity.class);
+        System.err.println("任务信息:"+createTaskEntity);
+        ConsistencyAnalyzeVo consistencyAnalyze = tableDataService.consistencyAnalyze(tableName,featureName,createTaskEntity);
         System.out.println(JSON.toJSONString(consistencyAnalyze));
         if(consistencyAnalyze!=null){
             return R.success("200",consistencyAnalyze);
@@ -163,6 +164,47 @@ public class TableDataController {
         }
         String fileStr = fileData.stream().collect(Collectors.joining("\n"));
         return R.success("200",fileStr);
+    }
+
+    // 获取首页疾病数据统计信息
+    @GetMapping("/getStaticDisease")
+    public R getStaticDisease(){
+        //
+        List<CategoryEntity> list = categoryService.list(null);
+        // 查询这些疾病下的所有表信息
+        list = list.stream().filter(categoryEntity -> {
+            return categoryEntity.getIsCommon() == 0;
+        }).collect(Collectors.toList()); // 找到专病数据库
+
+        Map<String, List<CategoryEntity>> resultMap = new HashMap<>();
+
+        for (CategoryEntity category : list) { // 找到病库中的所有顶级目录
+            if (category.getCatLevel()==2 && category.getIsDelete()==0) { // 找到一级目录
+                List<CategoryEntity> leafNodes = new ArrayList<>();
+                findLeafNodes(category, list, leafNodes); // 找到一级目录下的叶子节点
+                resultMap.put(category.getLabel(), leafNodes);
+            }
+        }
+        Set<String> keySet = resultMap.keySet();
+        ArrayList<DiseaseDataVo> diseaseDataVos = new ArrayList<>();
+        for (String key : keySet) {
+            DiseaseDataVo diseaseDataVo = new DiseaseDataVo(key,tableDataService.getDataCount(resultMap.get(key)));
+            diseaseDataVos.add(diseaseDataVo);
+        }
+        System.err.println("统计结果返回值："+diseaseDataVos);
+        return R.success("200",diseaseDataVos);
+    }
+
+    private void findLeafNodes(CategoryEntity parent, List<CategoryEntity> categoryList, List<CategoryEntity> leafNodes) {
+        for (CategoryEntity category : categoryList) {
+            if (category.getParentId() != null && category.getParentId().equals(parent.getId()) && category.getIsDelete()==0) {
+                if (category.getIsLeafs()==1) {
+                    leafNodes.add(category);
+                } else {
+                    findLeafNodes(category, categoryList, leafNodes);
+                }
+            }
+        }
     }
 
 }

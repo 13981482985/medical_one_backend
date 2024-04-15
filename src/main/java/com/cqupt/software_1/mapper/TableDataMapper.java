@@ -33,4 +33,8 @@ public interface TableDataMapper {
     Integer getCount(@Param("featureValue") String featureValue, @Param("tableName") String tableName, @Param("featureName") String featureName);
 
     List<Map<String, Object>> getTableDataByFields(@Param("tableName")String tableName, @Param("featureList") List<String> featureList);
+
+    int getCountByName(String tableName);
+
+    void batchInsertCsv(@Param("csvData") List<String[]> csvData, @Param("tableName") String tableName);
 }

@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 // TODO 公共模块新增类
-
 @Service
 public class FeatureManageServiceImpl extends ServiceImpl<FeatureManageMapper, FeatureEntity> implements FeatureManageService {
     @Autowired

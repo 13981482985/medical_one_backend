@@ -98,6 +98,16 @@ public class CategoryController {
         return level1;
     }
 
+    @GetMapping("/getTableNumber")
+    public R getTableNumber(){
+        List<CategoryEntity> list = categoryService.list();
+        List<CategoryEntity> collect = list.stream().filter(categoryEntity -> {
+            return categoryEntity.getIsLeafs()==1;
+        }).collect(Collectors.toList());
+        System.out.println("表数量为："+collect.size());
+        return R.success("200",collect.size());
+    }
+
 
 
 }

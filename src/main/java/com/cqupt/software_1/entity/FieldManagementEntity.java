@@ -1,10 +1,13 @@
 package com.cqupt.software_1.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Date;
 
 // TODO 公共模块新增类
 
@@ -19,9 +22,12 @@ public class FieldManagementEntity {
     private String chName;
     private Boolean diseaseStandard;
 
-    private Boolean isDemography;
-    private Boolean isSociology;
-    private Boolean isPhysiological;
+//    @TableField(value = "population")
+    private Boolean population;
+//    @TableField(value = "society")
+    private Boolean society;
+//    @TableField(value = "physiology")
+    private Boolean physiology;
 
     private String tableName;
     private String unit;
@@ -29,4 +35,19 @@ public class FieldManagementEntity {
     private Boolean discrete;
     private String range;
     private String disease;
+
+    private String isClinicaRelationship;
+    private String isMultipleDiseases;
+    private String isRoomInformation;
+    private String isQuestionnaire;
+    private String isTimeInformation;
+    private Date startTime;
+    private Date endTime;
+    private String timeSpace;
+    private Date createTime;
+    private Date updateTime;
+    private String tablePeople;
+    private String tableOrigin;
+    private String type;
+
 }

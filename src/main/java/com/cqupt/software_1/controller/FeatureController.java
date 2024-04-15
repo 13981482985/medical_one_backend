@@ -88,7 +88,7 @@ public class FeatureController {
         HashMap<String, FieldManagementEntity> tableMap  = new HashMap<>();
         List<FieldManagementEntity> featureList = fieldManagementService.list(null);
         for (FieldManagementEntity feature : featureList) {
-            if("integer".equals(feature.getUnit()) || "double precision".equals(feature.getUnit())) tableMap.put(feature.getFeatureName(),feature);
+            if("integer".equals(feature.getType()) || "double precision".equals(feature.getType())) tableMap.put(feature.getFeatureName(),feature);
         }
         return new R<>(200,"成功",tableMap);
 
@@ -257,37 +257,31 @@ public class FeatureController {
         // 获取返回结果
         String responseBody = EntityUtils.toString(response.getEntity());
         JsonNode jsonNode = objectMapper.readValue(responseBody,JsonNode.class);
-        // 创建任务
-        List<Task> list = taskService.list(null);
-        List<String> runParams = runPyEntity.getRunParams();
-        String features = runParams.stream().collect(Collectors.joining(","));
-        List<Task> isRepeat = list.stream().filter(task -> {
-            return runPyEntity.getAiName().equals(task.getModel()) && task.getFeature().equals(features) && task.getDataset().equals(runPyEntity.getTableName());
-        }).collect(Collectors.toList());
-        if(isRepeat == null || isRepeat.size()==0){
-            // 创建任务
-            Task task = new Task();
-            task.setModel(runPyEntity.getAiName());
-            task.setDataset(runPyEntity.getTableName());
-            task.setTaskname("疾病特征表征");
-            task.setLeader(UserThreadLocal.get().getUsername());
-            task.setCreatetime(new Timestamp(System.currentTimeMillis()));
-            String label = categoryMapper.getParentLabelByLabel(runPyEntity.getTableName());
-            task.setDisease(label);
-            task.setRemark("疾病特征表征");
-            task.setUserid(UserThreadLocal.get().getUid());
-            task.setFeature(features);
-            task.setTargetcolumn(features);
-            taskService.save(task);
-        }
+//        // 创建任务
+//        List<Task> list = taskService.list(null);
+//        List<String> runParams = runPyEntity.getRunParams();
+//        String features = runParams.stream().collect(Collectors.joining(","));
+//        List<Task> isRepeat = list.stream().filter(task -> {
+//            return runPyEntity.getAiName().equals(task.getModel()) && task.getFeature().equals(features) && task.getDataset().equals(runPyEntity.getTableName());
+//        }).collect(Collectors.toList());
+//        if(isRepeat == null || isRepeat.size()==0){
+//            // 创建任务
+//            Task task = new Task();
+//            task.setModel(runPyEntity.getAiName());
+//            task.setDataset(runPyEntity.getTableName());
+//            task.setTaskname("疾病特征表征");
+//            task.setLeader(UserThreadLocal.get().getUsername());
+//            task.setCreatetime(new Timestamp(System.currentTimeMillis()));
+//            String label = categoryMapper.getParentLabelByLabel(runPyEntity.getTableName());
+//            task.setDisease(label);
+//            task.setRemark("疾病特征表征");
+//            task.setUserid(UserThreadLocal.get().getUid());
+//            task.setFeature(features);
+//            task.setTargetcolumn(features);
+//            taskService.save(task);
+//        }
         return new RunPyR<>(200,"成功",jsonNode);
     }
-
-
-
-
-
-
 
 
 
