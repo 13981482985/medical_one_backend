@@ -49,7 +49,6 @@ public class TableManagerController {
             res.setRes(d);
             return res;
         } catch (Exception e) {
-            System.out.println("出错了");
             UploadResult res = new UploadResult();
             res.setCode(500);
             res.setE(e);

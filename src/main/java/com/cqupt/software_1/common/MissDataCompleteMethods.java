@@ -11,6 +11,7 @@ public class MissDataCompleteMethods {
     public MissDataCompleteMethods() {
         methodMap = new HashMap<>();
         methodMap.put("众数填充","modePadding");
+        methodMap.put("聚类填充","clusterReplacement");
         methodMap.put("最邻近插值","nearestNeighborInterpolation");
         methodMap.put("前向填充","forwardFilling");
         methodMap.put("均数替换","meanReplacement");

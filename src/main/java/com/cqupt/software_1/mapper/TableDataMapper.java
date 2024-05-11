@@ -37,4 +37,19 @@ public interface TableDataMapper {
     int getCountByName(String tableName);
 
     void batchInsertCsv(@Param("csvData") List<String[]> csvData, @Param("tableName") String tableName);
+
+
+    List<Map<String, Object>> getInfoByTableName(String tableName);
+
+    Integer getCountByTableName(String tableName);
+
+
+    void createTable2(@Param("fields") String[] headers, @Param("dataType") String[] featureDataType, @Param("tableName") String tableName);
+
+    Object[] getDistinctValue(@Param("tableName") String tableName, @Param("featureName") String featureName);
+
+    List<String> getTableFields(String tableName);
+
+    List<LinkedHashMap<String, Object>> getDataByLikeMatch(@Param("tableName") String tableName, @Param("tableFields") List<String> tableFields, @Param("value") String value);
+
 }

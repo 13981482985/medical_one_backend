@@ -79,8 +79,6 @@ public class NodesController {
             Integer parentId = entry.getKey();
             List<Integer> childIds = entry.getValue();
             Node parentNode = nodeMap.get(parentId);
-            //System.out.println(parentId + " -> " + childIds);
-            //System.out.println(parentNode);
             if (parentNode != null) {
                 List<Node> children = new ArrayList<>();
                 for (Integer childId : childIds) {
@@ -91,7 +89,6 @@ public class NodesController {
                 }
                 parentNode.setChildren(children);
             }
-            //System.out.println(parentNode);
         }
 
 

@@ -12,6 +12,7 @@ public class WebMVCConfig implements WebMvcConfigurer {
     UserLoginInterceptor userLoginInterceptor;
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(userLoginInterceptor).addPathPatterns("/**").excludePathPatterns("/user/login").excludePathPatterns("/user/signUp").excludePathPatterns("/user/logout");
+        registry.addInterceptor(userLoginInterceptor).addPathPatterns("/**").excludePathPatterns("/user/login").excludePathPatterns("/user/signUp").excludePathPatterns("/user/logout").excludePathPatterns("/notice/queryNotices").excludePathPatterns("/common/kaptcha")
+                .excludePathPatterns("/user/queryUsernameExist").excludePathPatterns("/user/queryQuestions").excludePathPatterns("/user/verify").excludePathPatterns("/user/updatePwd").excludePathPatterns("/user/updatePas");
     }
 }

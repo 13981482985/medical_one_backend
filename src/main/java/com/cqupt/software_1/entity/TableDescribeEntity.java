@@ -23,8 +23,20 @@ public class TableDescribeEntity {
     private String createTime;
     private String classPath;
 
+    // 新加
+
+    private Float tableSize;
+    private Integer uid;
+    private String tableStatus;
+
+    //
+
     @TableField(exist = false)
     private Integer colNumber;
     @TableField(exist = false)
     private Integer rowNumber;
+
+    private String checkApproving;
+    private String checkApproved;
+
 }

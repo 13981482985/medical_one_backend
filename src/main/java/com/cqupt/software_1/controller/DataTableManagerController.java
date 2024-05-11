@@ -76,7 +76,6 @@ public class DataTableManagerController {
         } catch (Exception e) {
             UploadResult res =new UploadResult();
             res.setCode(500);
-            System.out.println("错误信息: " + e);
             res.setE(e);
             return res;
         }
@@ -85,7 +84,6 @@ public class DataTableManagerController {
 
     @GetMapping("/getTableData")
     public R getTableData(@RequestParam("tableId") String tableId, @RequestParam("tableName") String tableName){
-        System.out.println("tableId=="+tableId+"   tableName=="+tableName);
         List<Map<String, Object>> tableData = dataTableManagerService.getTableData(tableId, tableName);
         return R.success("100",tableData);
     }

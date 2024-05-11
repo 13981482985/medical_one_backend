@@ -13,4 +13,8 @@ import lombok.NoArgsConstructor;
 public class FilterTableDataVo {
     private AddDataFormVo addDataForm;
     private CategoryEntity nodeData;
+
+    // TODO 新增
+    private String nodeid;
+    private String status;
 }

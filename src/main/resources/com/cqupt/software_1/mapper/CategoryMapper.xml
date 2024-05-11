@@ -9,4 +9,44 @@
     <select id="getParentLabelByLabel" resultType="java.lang.String">
         select label from category where "id"=(select parent_id from category where label='${tableName}')
     </select>
+
+
+    <select id="getLabelByPid" resultType="java.lang.String">
+        SELECT "label" FROM category WHERE id = #{pid};
+    </select>
+
+    <select id="getSpDisease" resultType="com.cqupt.software_1.entity.CategoryEntity">
+        SELECT * FROM category WHERE is_common = 0 and is_leafs = 1;
+    </select>
+
+
+    <select id="getComDisease" resultType="com.cqupt.software_1.entity.CategoryEntity">
+        SELECT * FROM category WHERE is_common = 1 and is_leafs = 1;
+    </select>
+
+    <!--    下面方法是管理员端-数据管理新增-->
+    <select id="getLevel2Label" resultType="com.cqupt.software_1.entity.CategoryEntity">
+        --         管理员端-数据管理新更改
+-- 在默认根节点parent_id=1下面的二级目录（即一级病种）下
+        SELECT * FROM "category" WHERE cat_level=2 and parent_id='1' and is_delete=0;
+    </select>
+
+    <select id="getLabelsByPid" resultType="com.cqupt.software_1.entity.CategoryEntity">
+        SELECT * FROM category WHERE parent_id = #{pid};
+    </select>
+
+    <update id="updateTableNameByTableId">
+        update category set label=#{tableName}, status=#{tableStatus} where id = CAST(#{tableid} AS VARCHAR);;
+    </update>
+
+
+
+    <update id="changeStatusToShare">
+        update category set status=1 where id = #{id} ;
+        update table_describe set table_status=1 where table_id = #{id};
+    </update>
+    <update id="changeStatusToPrivate">
+        update category set status=0 where id = #{id};
+        update table_describe set table_status=0 where table_id = #{id};
+    </update>
 </mapper>

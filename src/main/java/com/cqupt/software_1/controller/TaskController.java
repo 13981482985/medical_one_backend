@@ -70,7 +70,6 @@ public class TaskController {
     public R result(@PathVariable int id) throws JsonProcessingException {
         Task task = taskService.getlistbyId(id);
         TaskRequest request = new TaskRequest();
-        System.out.println(task);
         ObjectMapper objectMapper = new ObjectMapper();
         String res = task.getResult();
         String[][] retrievedArray = objectMapper.readValue(res, String[][].class);
@@ -138,7 +137,6 @@ public class TaskController {
                             @RequestParam(value = "leader",required = false)String leader,
                             @RequestParam(value = "newPage",required = false)Integer newPage,
                             @RequestParam(value = "pageSize",required = false) Integer pageSize){
-        System.out.println("参数为："+disease + tasktype + leader+newPage+pageSize);
         List<Task> tasks = filterTask(disease, tasktype, leader);
         int start = (newPage-1)*pageSize;
         int end = newPage*pageSize;

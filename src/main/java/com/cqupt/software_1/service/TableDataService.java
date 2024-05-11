@@ -16,7 +16,7 @@ import java.util.Map;
 public interface TableDataService {
     List<LinkedHashMap<String,Object>> getTableData(String TableId, String tableName);
 
-    List<String> uploadFile(MultipartFile file, String tableName, String type, String user, int userId, String parentId, String parentType) throws IOException, ParseException;
+    List<String> uploadFile(MultipartFile file, String tableName, String type, String user, int userId, String parentId, String parentType, String status) throws IOException, ParseException;
 
     void createTable(String tableName, List<CreateTableFeatureVo> characterList, String createUser, CategoryEntity nodeData);
 
@@ -33,4 +33,17 @@ public interface TableDataService {
     List<Map<String, Object>> getTableDataByFields(String tableName, List<String> featureList);
 
     Integer getDataCount(List<CategoryEntity> categoryEntities);
+
+
+
+    List<Map<String, Object>> getInfoByTableName(String tableName);
+    Integer getCountByTableName(String tableName);
+
+    List<String> getTableFields(String tableName);
+
+    List<LinkedHashMap<String, Object>> getDataLikeMatch(String tableName, List<String> tableFields, String value);
+
+    void createFilterBtnTable(String dataName, List<CreateTableFeatureVo> characterList, String createUser, String status, String uid, String username, String isFilter, String isUpload, String uidList, String nodeid);
+
+    List<LinkedHashMap<String, Object>> getFilterDataByConditionsByDieaseId(List<CreateTableFeatureVo> characterList,String uid,String username,String nodeid);
 }

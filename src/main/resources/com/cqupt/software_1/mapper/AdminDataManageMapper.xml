@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cqupt.software_1.mapper.AdminDataManageMapper">
+
+    <update id="createTable">
+        create table ${tableName} (
+        <foreach collection="headers" item="columnName" separator=",">
+            ${columnName} VARCHAR(255)
+        </foreach>
+        );
+    </update>
+    <insert id="insertRow">
+        INSERT INTO ${tableName}
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <foreach collection="row" item="value">
+                #{value},
+            </foreach>
+        </trim>
+    </insert>
+    <!-- List<AdminDataManage> selectAllDataInfo();-->
+    <select id="selectAllDataInfo" resultType="com.cqupt.software_1.entity.TableDescribeEntity">
+        SELECT * FROM "table_describe";
+    </select>
+<!--        List<AdminDataManage> selectDataByName(int pageNum, int pageSize, String searchType, String Name);   -->
+    <select id="selectDataByName" resultType="com.cqupt.software_1.entity.TableDescribeEntity">
+        SELECT *
+        FROM "table_describe"
+        WHERE  ${searchType}  LIKE CONCAT('%', #{name}, '%')
+
+    </select>
+
+<!--    List<AdminDataManage> selectDataById(String id);-->
+    <select id="selectDataById" resultType="com.cqupt.software_1.entity.TableDescribeEntity">
+        SELECT *
+        FROM "table_describe"
+        where id=#{id}
+    </select>
+    <update id="updateDataBaseTableName" >
+        ALTER TABLE ${old_name} RENAME TO  ${new_name}
+    </update>
+
+    <!-- 删除表的SQL语句 -->
+    <!-- void deleteByTableName(String tablename);-->
+    <delete id="deleteByTableName">
+        DROP TABLE IF EXISTS public.${tableName};
+    </delete>
+    <!-- 删除table_describe的数据 -->
+    <delete id="deleteByTableId">
+        delete from "table_describe" where table_id = CAST(#{tableId} AS VARCHAR)
+    </delete>
+</mapper>

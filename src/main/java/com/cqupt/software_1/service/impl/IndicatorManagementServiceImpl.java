@@ -48,58 +48,124 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
     // TODO 根据检查类型获取字段以及表中每一个字段的缺失率
     @Override
     public List<IndicatorManageEntity> getIndicators(List<String> types,String tableName) {
-        // 跟据中文名称获取值指标类型英文名
-        List<IndicatorCategory> categories = indicatorService.getEnName(types);
-        List<IndicatorManageEntity> list = new ArrayList<>();
-        List<String> indexEnNames = categories.stream().map(indicatorCategory -> {
-            return indicatorCategory.getIndicator();
-        }).collect(Collectors.toList());
-        List<FieldManagementEntity> fieldManagementEntities = fieldManagementService.getFieldsByType(indexEnNames);
-        for (FieldManagementEntity fieldManagementEntity : fieldManagementEntities) {
-            IndicatorManageEntity indicatorManageEntity = new IndicatorManageEntity();
-            indicatorManageEntity.setFeatureName(fieldManagementEntity.getFeatureName());
-            indicatorManageEntity.setLabel(fieldManagementEntity.getChName());
-            indicatorManageEntity.setDiscrete(fieldManagementEntity.getDiscrete());
-            if(fieldManagementEntity.getType()!=null && !fieldManagementEntity.getType().equals("character varying")) {
-                if(fieldManagementEntity.getDiscrete()!=null && fieldManagementEntity.getDiscrete()) {
-                    indicatorManageEntity.setFeatureDataType(2); // 数字离散
-                    indicatorManageEntity.setMissCompleteMethod("前向填充");
-                }
-                else {
-                    indicatorManageEntity.setFeatureDataType(1); // 数字连续
-                    indicatorManageEntity.setMissCompleteMethod("均数替换");
-                }
-            }else {
-                if(indicatorManageEntity.getDiscrete()!=null && indicatorManageEntity.getDiscrete()){
-                    indicatorManageEntity.setFeatureDataType(3); // 文本数据离散
-                    indicatorManageEntity.setMissCompleteMethod("前向填充");
-                }else continue; // 文本非离散 无法分析
-            }
-            System.err.println("当前列信息为；"+fieldManagementEntity);
-            if(fieldManagementEntity.getPopulation()) {
-                indicatorManageEntity.setType("diagnosis");
-                indicatorManageEntity.setTypeCh("人口学指标");
-            }else if(fieldManagementEntity.getPhysiology()){
-                indicatorManageEntity.setType("vital_sign");
-                indicatorManageEntity.setTypeCh("生理学指标");
-            }else if(fieldManagementEntity.getSociety()){
-                indicatorManageEntity.setType("pathology");
-                indicatorManageEntity.setTypeCh("社会学指标");
-            }else{
-                indicatorManageEntity.setType("other_index");
-                indicatorManageEntity.setTypeCh("其他类型指标");
-            }
-            float missRate = indicatorManagementMapper.getMissRate(indicatorManageEntity.getFeatureName(),tableName); // 缺失率
-            indicatorManageEntity.setMissRate(missRate);
-
-            list.add(indicatorManageEntity);
+        // 判断一张表的字段是否与字段管理表对齐 不对齐就只有其他指标，对齐就可以分成人口学，社会学，生理学指标
+        List<Map<String, String>> fieldMaps = indicatorManagementMapper.getTableFeilds(tableName);
+        List<String> fields = fieldManagementService.list().stream().map((fieldManagementEntity -> {
+            return fieldManagementEntity.getFeatureName();
+        })).collect(Collectors.toList());
+        HashMap<String, String> fieldMap = new HashMap<>();
+        for (Map<String, String> map : fieldMaps) {
+            fieldMap.put(map.get("column_name"), map.get("data_type"));
         }
-        return list;
+        List<String> tableFields = new ArrayList<>(fieldMap.keySet());
+        Collections.sort(tableFields);
+        Collections.sort(fields);
+        List<IndicatorManageEntity> list = new ArrayList<>();
+        if(tableFields.equals(fields)){ // 这个表字段管理表所管理
+            // 跟据中文名称获取值指标类型英文名
+            if(types.contains("其他")) types.remove("其他");
+            if(types.size() == 0) return null;
+            List<IndicatorCategory> categories = indicatorService.getEnName(types);
+            List<String> indexEnNames = categories.stream().map(indicatorCategory -> {
+                return indicatorCategory.getIndicator();
+            }).collect(Collectors.toList());
+            List<FieldManagementEntity> fieldManagementEntities = fieldManagementService.getFieldsByType(indexEnNames);
+            for (FieldManagementEntity fieldManagementEntity : fieldManagementEntities) {
+                IndicatorManageEntity indicatorManageEntity = new IndicatorManageEntity();
+                indicatorManageEntity.setFeatureName(fieldManagementEntity.getFeatureName());
+                indicatorManageEntity.setLabel(fieldManagementEntity.getChName());
+                indicatorManageEntity.setDiscrete(fieldManagementEntity.getDiscrete());
+                if(fieldManagementEntity.getType()!=null && !fieldManagementEntity.getType().equals("character varying")) { // 数值类型
+                    if(fieldManagementEntity.getDiscrete()!=null && fieldManagementEntity.getDiscrete()) {
+                        indicatorManageEntity.setFeatureDataType(2); // 数字离散
+                        indicatorManageEntity.setMissCompleteMethod("前向填充");
+                    }
+                    else {
+                        indicatorManageEntity.setFeatureDataType(1); // 数字连续
+                        indicatorManageEntity.setMissCompleteMethod("均数替换");
+                    }
+                }else {
+                    if(indicatorManageEntity.getDiscrete()!=null && indicatorManageEntity.getDiscrete()){
+                        indicatorManageEntity.setFeatureDataType(3); // 文本数据离散
+                        indicatorManageEntity.setMissCompleteMethod("前向填充");
+                    }else continue; // 文本非离散 无法分析
+                }
+                if(fieldManagementEntity.getPopulation()) {
+                    indicatorManageEntity.setType("diagnosis");
+                    indicatorManageEntity.setTypeCh("人口学指标");
+                }else if(fieldManagementEntity.getPhysiology()){
+                    indicatorManageEntity.setType("vital_sign");
+                    indicatorManageEntity.setTypeCh("生理学指标");
+                }else if(fieldManagementEntity.getSociety()){
+                    indicatorManageEntity.setType("pathology");
+                    indicatorManageEntity.setTypeCh("社会学指标");
+                }else{
+                    indicatorManageEntity.setType("other_index");
+                    indicatorManageEntity.setTypeCh("其他类型指标");
+                }
+                float missRate = indicatorManagementMapper.getMissRate(indicatorManageEntity.getFeatureName(),tableName); // 缺失率
+                indicatorManageEntity.setMissRate(missRate);
+                // 设置 range的个数 TODO
+                if(fieldManagementEntity.getRange()!=null) {
+                    String[] split = fieldManagementEntity.getRange().split(",");
+                    indicatorManageEntity.setRangeSize(split.length);
+                }else indicatorManageEntity.setRangeSize(0);
+                list.add(indicatorManageEntity);
+            }
+            return list;
+        }else{  // 没有被字段管理表所管理
+            if(types.contains("其他")){//只有选中了 “其他”这个指标就显示没有没被字段管理的表字段信息
+                // 查询字段的 类型、缺失率、离散占比（不同的数，以及对总有效数的占比）
+                // 遍历每一个字段
+                for (String tableField : tableFields) {
+                    IndicatorManageEntity indicatorManageEntity = new IndicatorManageEntity();
+                    indicatorManageEntity.setType("other"); // 设置检查类型
+                    indicatorManageEntity.setFeatureName(tableField);
+                    indicatorManageEntity.setLabel(tableField); // 中文名称
+                    indicatorManageEntity.setTypeCh("其他");
+                    //  查询 不同取值
+                    Map<String, Long> map  = indicatorManagementMapper.getFiledCount(tableField, tableName);
+                    long[] counts = {map.get("num1"),map.get("num2")};
+                    if(counts.length==2){
+                        // 获取字段的连续值
+                        float missRate = indicatorManagementMapper.getMissRate(tableField, tableName);
+                        indicatorManageEntity.setMissRate(missRate);
+                        if(counts[0]<=10 && counts[0]>=1){
+                            if(1.0*counts[0]/counts[1]<0.05) { // 离散
+                                indicatorManageEntity.setDiscrete(true);
+                                indicatorManageEntity.setRangeSize((int)counts[0]);
+                                if(fieldMap.get(tableField).equals("integer") || fieldMap.get(tableField).equals("double precision")){ // 数字类型
+                                    indicatorManageEntity.setFeatureDataType(2);
+                                    indicatorManageEntity.setMissCompleteMethod("前向填充");
+                                }else{ // 文本离散
+                                    indicatorManageEntity.setMissCompleteMethod("前向填充");
+                                    indicatorManageEntity.setFeatureDataType(3);
+                                }
+                            }
+                        }else{ // 非离散
+                            if(fieldMap.get(tableField).equals("integer") || fieldMap.get(tableField).equals("double precision")) { // 数字类型
+                                indicatorManageEntity.setFeatureDataType(1);
+                                indicatorManageEntity.setMissCompleteMethod("均数替换");
+                            }else continue;
+                        }
+                    }else{ // 数据表中该字段值全部为空  不需要设置默认的填充类型 没法填充
+                        indicatorManageEntity.setDiscrete(false); // 默认设置非离散
+                        indicatorManageEntity.setMissRate(100.0f); // 缺失率百分之百
+                        if (fieldMap.get(tableField).equals("integer") || fieldMap.get(tableField).equals("double precision")){ // 数字类型
+                            indicatorManageEntity.setFeatureDataType(1); // 数字类型
+                        }else continue; // 文本但又非离散
+                    }
+                    list.add(indicatorManageEntity);
+                }
+                System.out.println("返回值："+list);
+                return list;
+            }else{
+                return null;
+            }
+        }
     }
     @Override
     public List<IndicatorsMissDataVo> getIndicatorsInfo(List<IndicatorManageEntity> checkedFeats, String tableName) {
-        System.out.println("------------------------");
-        System.out.println("tableName:"+tableName+" cheackedFeacts:"+JSON.toJSONString(checkedFeats));
         // 跟据特征名称和表名查询有效值，缺失值个数
         List<IndicatorsMissDataVo> indicatorsMissDataVos = new ArrayList<>();
         for (IndicatorManageEntity checkedFeat : checkedFeats) {
@@ -173,7 +239,6 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                 return "缺失值补齐".equals(task.getTasktype()) && task.getFeature().equals(str) && task.getDataset().equals(dataFillMethodVo.getTableName()) && task.getTaskname().equals(dataFillMethodVo.getNewTaskInfo().getTaskName());
             }).collect(Collectors.toList());
             if(isRepeat == null || isRepeat.size() == 0) {
-                System.err.println("开始创建缺失值补齐任务了！");
                 // 创建任务模型
                 Task task = new Task();
                 // 获取当前时间的 LocalDateTime 对象
@@ -223,8 +288,6 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                     dataList.add(row.asText());
                 }
             }
-        }else{
-            System.out.println("不是list");
         }
         return dataList;
     }

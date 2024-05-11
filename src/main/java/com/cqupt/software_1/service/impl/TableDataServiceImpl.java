@@ -5,16 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cqupt.software_1.common.RunPyEntity;
 import com.cqupt.software_1.common.UserThreadLocal;
 import com.cqupt.software_1.entity.*;
-import com.cqupt.software_1.mapper.CategoryMapper;
-import com.cqupt.software_1.mapper.StatisticalDataMapper;
-import com.cqupt.software_1.mapper.TableDataMapper;
-import com.cqupt.software_1.mapper.TableDescribeMapper;
+import com.cqupt.software_1.mapper.*;
 import com.cqupt.software_1.service.*;
 import com.cqupt.software_1.utils.HTTPUtils;
 import com.cqupt.software_1.vo.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -40,6 +38,8 @@ import java.util.stream.Collectors;
 @Service
 public class TableDataServiceImpl implements TableDataService {
     private volatile boolean hasError = false;
+    @Autowired
+    IndicatorManagementMapper indicatorManagementMapper;
 
     @Autowired
     ThreadPoolTaskExecutor taskExecutor;
@@ -67,6 +67,11 @@ public class TableDataServiceImpl implements TableDataService {
 
     @Autowired
     IndicatorManagementService indicatorManagementService;
+
+    @Autowired
+    FilterDataColMapper filterDataColMapper;
+    @Autowired
+    FilterDataInfoMapper filterDataInfoMapper;
     @Override
     public List<LinkedHashMap<String, Object>> getTableData(String TableId, String tableName) {
         List<LinkedHashMap<String, Object>> tableData = tableDataMapper.getTableData(tableName);
@@ -75,7 +80,7 @@ public class TableDataServiceImpl implements TableDataService {
 
     @Transactional(propagation = Propagation.REQUIRED) // 事务控制
     @Override
-    public List<String> uploadFile(MultipartFile file, String tableName, String type, String user, int userId, String parentId, String parentType) throws IOException, ParseException {
+    public List<String> uploadFile(MultipartFile file, String tableName, String type, String user, int userId, String parentId, String parentType, String status) throws IOException, ParseException {
         // 封住表描述信息
         TableDescribeEntity tableDescribeEntity = new TableDescribeEntity();
         tableDescribeEntity.setClassPath(parentType+"/"+type);
@@ -87,12 +92,15 @@ public class TableDataServiceImpl implements TableDataService {
         CategoryEntity categoryEntity = new CategoryEntity();
         categoryEntity.setLabel(tableName);
         CategoryEntity parentCate = categoryMapper.selectById(parentId);
+        categoryEntity.setStatus(status);
         categoryEntity.setCatLevel(parentCate.getCatLevel()+1);
         categoryEntity.setIsCommon(parentCate.getIsCommon());
         categoryEntity.setIsLeafs(1);
+        categoryEntity.setUid(UserThreadLocal.get().getUid().toString());
         categoryEntity.setPath(parentCate.getPath()+"/"+tableName);
         categoryEntity.setParentId(parentId);
         categoryEntity.setIsDelete(0);
+
 
         // 保存数据库
         categoryMapper.insert(categoryEntity);
@@ -179,6 +187,8 @@ public class TableDataServiceImpl implements TableDataService {
         node.setCatLevel(nodeData.getCatLevel()+1);
         node.setIsWideTable(0);
         node.setLabel(tableName);
+        node.setStatus(nodeData.getStatus());
+        node.setUid(UserThreadLocal.get().getUid().toString());
         categoryMapper.insert(node); // 保存目录信息
         // 表描述信息
         TableDescribeEntity tableDescribeEntity = new TableDescribeEntity();
@@ -191,19 +201,41 @@ public class TableDataServiceImpl implements TableDataService {
         tableDescribeMapper.insert(tableDescribeEntity);
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"筛选数据建表");
         userLogService.save(userLog);
+
+
+        // 插入 filter_data_info 表信息
+        FilterDataInfo filterDataInfo = new FilterDataInfo();
+        filterDataInfo.setUid(UserThreadLocal.get().getUid());
+        filterDataInfo.setCreateUser(UserThreadLocal.get().getUsername());
+        filterDataInfo.setUsername(UserThreadLocal.get().getUsername());
+        filterDataInfo.setCateId(nodeData.getId());
+        filterDataInfo.setParentId(nodeData.getParentId());
+        filterDataInfo.setFilterTime(new Timestamp(System.currentTimeMillis())); // 时间
+        filterDataInfoMapper.insert(filterDataInfo);
+
+
+        for (CreateTableFeatureVo createTableFeatureVo : characterList) {
+            FilterDataCol filterDataCol = new FilterDataCol();
+            BeanUtils.copyProperties(createTableFeatureVo,filterDataCol);
+            filterDataCol.setFilterDataInfoId(filterDataInfo.getId());
+            FieldManagementEntity fieldManagementEntity = fieldManagementService.getOne(new QueryWrapper<FieldManagementEntity>().eq("feature_name", createTableFeatureVo.getFeatureName()));
+            filterDataCol.setRange(fieldManagementEntity.getRange());
+            filterDataColMapper.insert(filterDataCol);
+        }
+
         statisticalDataMapper.deleteCache(); // 清除数据统计的缓存
 
     }
 
     // 根据条件筛选数据
+    @Transactional
     @Override
     public List<LinkedHashMap<String, Object>> getFilterDataByConditions(List<CreateTableFeatureVo> characterList,CategoryEntity nodeData) {
         List<CategoryEntity> categoryEntities = categoryMapper.selectList(null); // 查询所有的目录信息
         // 找到所有的宽表节点
         List<CategoryEntity> allWideTableNodes = categoryEntities.stream().filter(categoryEntity -> {
-            return categoryEntity.getIsWideTable()!=null && categoryEntity.getIsWideTable() == 1;
+            return categoryEntity.getIsDelete()==0 && categoryEntity.getIsLeafs()==1 && categoryEntity.getIsWideTable()!=null && categoryEntity.getIsWideTable() == 1;
         }).collect(Collectors.toList());
-        System.out.println("所有的宽表节点："+JSON.toJSONString(allWideTableNodes));
         // 遍历当前节点的所有叶子节点，找到这个宽表节点
         ArrayList<CategoryEntity> leafNodes = new ArrayList<>();
         getLeafNode(nodeData, leafNodes);
@@ -232,7 +264,6 @@ public class TableDataServiceImpl implements TableDataService {
         }
         // 处理varchar类型的数据
         for (CreateTableFeatureVo createTableFeatureVo : characterList) {
-            System.out.println("当前字段的类型："+createTableFeatureVo.getType());
             if(createTableFeatureVo.getType()==null || createTableFeatureVo.getType().equals("character varying")){
                 createTableFeatureVo.setValue("'"+createTableFeatureVo.getValue()+"'");
             }
@@ -249,6 +280,28 @@ public class TableDataServiceImpl implements TableDataService {
                 res.add(rowData);
             }
         }
+
+//        // 插入 filter_data_info 表信息
+//        FilterDataInfo filterDataInfo = new FilterDataInfo();
+//        filterDataInfo.setUid(UserThreadLocal.get().getUid());
+//        filterDataInfo.setCreateUser(UserThreadLocal.get().getUsername());
+//        filterDataInfo.setUsername(UserThreadLocal.get().getUsername());
+//        filterDataInfo.setCateId(nodeData.getId());
+//        filterDataInfo.setParentId(nodeData.getParentId());
+//        filterDataInfo.setFilterTime(new Timestamp(System.currentTimeMillis())); // 时间
+//        filterDataInfoMapper.insert(filterDataInfo);
+//
+//
+//        ArrayList<FilterDataCol> filterDataCols = new ArrayList<>();
+//        for (CreateTableFeatureVo createTableFeatureVo : characterList) {
+//            FilterDataCol filterDataCol = new FilterDataCol();
+//            BeanUtils.copyProperties(createTableFeatureVo,filterDataCol);
+//            filterDataCol.setFilterDataInfoId(filterDataInfo.getId());
+//            FieldManagementEntity fieldManagementEntity = fieldManagementService.getOne(new QueryWrapper<FieldManagementEntity>().eq("feature_name", createTableFeatureVo.getFeatureName()));
+//            filterDataCol.setRange(fieldManagementEntity.getRange());
+//            filterDataColMapper.insert(filterDataCol);
+//        }
+
 
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"筛选数据");
         userLogService.save(userLog);
@@ -269,9 +322,10 @@ public class TableDataServiceImpl implements TableDataService {
             featureList = new ArrayList<String>(Arrays.asList(headers));
             // 删除表头行，剩余的即为数据行
             csvData.remove(0);
+            // 解析字段类型
+            String[] featureDataType = getFeatureDataType(csvData);
             // 创建表信息
-            tableDataMapper.createTable(headers, tableName);
-            System.err.println("表头创建成功！！！！！！！！！！！！！");
+            tableDataMapper.createTable2(headers,featureDataType, tableName);
 
 //            // 批量
             // TODO 分批插入 防止sql参数传入过多导致溢出
@@ -323,6 +377,24 @@ public class TableDataServiceImpl implements TableDataService {
 
         }
         return featureList;
+    }
+
+    private String[] getFeatureDataType(List<String[]> csvData) {
+        String[] dataType = new String[csvData.get(0).length];
+        for (String[] csvDatum : csvData) {  //遍历每一行
+            for (int i=0; i<csvDatum.length; i++) { // 遍历每一列
+                try {
+                    Float.parseFloat(csvDatum[i]); // 可以转成数字
+                }catch (Exception e){ // 不可以转成数字
+                    dataType[i] = "VARCHAR(255)";
+                }
+            }
+        }
+        for(int i=0; i<csvData.get(0).length; i++){
+            if(dataType[i]==null) dataType[i]="float8";
+        }
+        System.out.println("字段类型为："+JSON.toJSONString(dataType));
+        return dataType;
     }
 
     // 数据填充后将数据导出csv 文件 List<String> 每一个string都是一行数据，以逗号分开
@@ -383,6 +455,17 @@ public class TableDataServiceImpl implements TableDataService {
         // 判断这个特征属于离散还是非离散
         FeatureDescAnaVo featureDescAnaVo = new FeatureDescAnaVo();
         FieldManagementEntity featureEntity = fieldManagementService.getOne(new QueryWrapper<FieldManagementEntity>().eq("feature_name", featureName));
+        if(featureEntity==null){ // 不被字段管理表管理
+            featureEntity = new FieldManagementEntity();
+            // 查询数据库判断是否离散
+            Map<String, Long> map= indicatorManagementMapper.getFiledCount(featureName, tableName);
+            if(map.get("num1")<=10 && map.get("num1")>=1 && 1.0*map.get("num1")/map.get("num2")<0.05) {
+                System.out.println("判断为离散");
+                featureEntity.setDiscrete(true);
+            }
+
+            else featureEntity.setDiscrete(false);
+        }
         if(featureEntity.getDiscrete()==null || !featureEntity.getDiscrete()){ // 非离散
             // 获取 总条数 中位数 众数 均值 中位数 最小值 最大值 众数
             // 调用远程方法
@@ -393,22 +476,32 @@ public class TableDataServiceImpl implements TableDataService {
             JsonNode jsonNode = HTTPUtils.postRequest(param, "/notDiscreteFeatureDesc");
             // 解析返回值
             NotDiscrete notDiscrete = getDataFromPy(jsonNode);
-            /**  数据分段 柱状图数据 6个柱子 一个柱子表示一个数据范围取值的数据量 跟据最大最小值划分区间 **/
+            /**  数据分段 柱状图数据 6个柱子 一个柱子表示一个数据范围取值的数据量 跟据最大最小值划分区间 判断类型 如果是整数就转换成整数就不保留小数， 浮点数就保留小数 **/
             LinkedHashMap<String, Integer> binData = getBinData(notDiscrete.getMax(), notDiscrete.getMin(), tableName, featureName);
+
             notDiscrete.setBinData(binData);
             notDiscrete.setTotal(totalCount);
             featureDescAnaVo.setNotDiscrete(notDiscrete);
             featureDescAnaVo.setDiscrete(false);
         }else{ // 离散
-            String s = featureEntity.getRange().replace("{", "").replace("}", "");
-            System.out.println("值为："+s);
-            String[] featureValues = s.split(",");
-            System.out.println("分类情况为："+featureValues);
+            List<String> values = new ArrayList<>();
+            if(featureEntity.getRange() == null) { // 不被字段管理表管理
+                // 获取表中这个字段有哪些不同的取值
+                System.out.println("表名："+tableName +"  列名："+featureName+ "  mapper:"+tableDataMapper);
+                Object[] res =  tableDataMapper.getDistinctValue(tableName, featureName);
+                System.out.println("返回结果"+JSON.toJSONString(res));
+                for (Object re : res) values.add(re.toString());
+            }else{
+                String s = featureEntity.getRange().replace("{", "").replace("}", "");
+                String[] featureValues = s.split(",");
+                for (String featureValue : featureValues) values.add(featureValue);
+            }
             ArrayList<DiscreteVo> discreteVos = new ArrayList<>();
             // 获取数据总条数
+
             Integer totalCount = tableDataMapper.getAllCount(tableName);
             Integer validCount = 0;
-            for (String featureValue : featureValues) {
+            for (String featureValue : values) {
                 DiscreteVo discreteVo = new DiscreteVo();
                 // 计算每个取值的数据总条数
                 featureValue = featureValue.trim().replace("\"", "");
@@ -731,18 +824,34 @@ public class TableDataServiceImpl implements TableDataService {
             else {
                 end = Float.parseFloat(String.format("%.2f",min+gap*(i+1)));
             }
+
             // 获取每个区间的数据量
-            Integer count = tableDataMapper.getCountByCondition(String.valueOf(start),String.valueOf(end), tableName,featureName);
-            binData.put(start+"~"+end,count);
+            String type = null;
+            FieldManagementEntity fieldManagementEntity = fieldManagementService.getOne(new QueryWrapper<FieldManagementEntity>().eq("feature_name", featureName));
+            if(fieldManagementEntity==null) type =  indicatorManagementMapper.getColType(tableName,featureName);
+            else type = fieldManagementEntity.getType();
+            if ("integer".equals(type)){
+                int s = (int)start;
+                int e = (int)end;
+                Integer count = tableDataMapper.getCountByCondition(String.valueOf(s),String.valueOf(e), tableName,featureName);
+                binData.put(start+"~"+end,count);
+            }else{
+                Integer count = tableDataMapper.getCountByCondition(String.valueOf(start),String.valueOf(end), tableName,featureName);
+                binData.put(start+"~"+end,count);
+            }
+
         }
         return binData;
     }
 
     private void getLeafNode(CategoryEntity nodeData,List<CategoryEntity> leafNodes){
-        for (CategoryEntity child : nodeData.getChildren()) {
-            if(child.getIsLeafs()==1) leafNodes.add(child);
-            else getLeafNode(child,leafNodes);
+        if(nodeData.getChildren()!=null && nodeData.getChildren().size()>0){
+            for (CategoryEntity child : nodeData.getChildren()) {
+                if(child.getIsLeafs()!=null && child.getIsLeafs()==1) leafNodes.add(child);
+                else getLeafNode(child,leafNodes);
+            }
         }
+
     }
 
     private CategoryEntity getBelongType(CategoryEntity nodeData, ArrayList<CategoryEntity> leafNodes){
@@ -757,5 +866,204 @@ public class TableDataServiceImpl implements TableDataService {
         return null;
     }
 
-    
+
+
+
+    @Override
+    public Integer getCountByTableName(String tableName) {
+        return tableDataMapper.getCountByTableName(tableName);
+    }
+
+    @Override
+    public List<String> getTableFields(String tableName) {
+        return tableDataMapper.getTableFields(tableName);
+    }
+
+    @Override
+    public List<LinkedHashMap<String, Object>> getDataLikeMatch(String tableName, List<String> tableFields, String value) {
+        return tableDataMapper.getDataByLikeMatch(tableName, tableFields, value);
+    }
+
+//    @Override
+//    public void createFilterBtnTable(String dataName, List<CreateTableFeatureVo> characterList, String createUser, String status, String uid, String username, String isFilter, String isUpload, String uidList, String nodeid) {
+//
+//    }
+
+    @Override
+    public void createFilterBtnTable(String tableName, List<CreateTableFeatureVo> characterList, String createUser, String status, String uid, String username, String IsFilter, String IsUpload, String uid_list,String nodeid) {
+        /**
+         *          筛选数据
+         *              查询当前目录下的宽表所有数据
+         *                  1、查询nodeData的所有子节点，找到是宽表的节点信息（表名）
+         *              筛选 其他病种符合条件的所有数据
+         *                  2、遍历所有目录信息 找到所有的宽表节点，排除上一步找到的宽表节点，使用剩下的宽表节点筛选数据
+         *              合并所有数据
+         *          创建表头信息
+         *              3、根据宽表的字段管理表创建一个新表，存储筛选后的数据
+         *          保存创建表的数据信息信息
+         *              4、将1、2步骤的数据插入到3创建的表中
+         *          保存目录信息
+         *              5、创建目录节点信息，并保存数据库
+         *
+         */
+
+        System.out.println("前端传递的值："+"表名"+tableName+"  userName"+username+"  userId"+uid+"  IsFilter"+IsFilter+"  IsUpload"+"  uid_list"+uid_list+"  nodeID"+nodeid);
+
+        CategoryEntity nodeData = categoryMapper.selectById(nodeid);
+        List<LinkedHashMap<String, Object>> res = getFilterDataByConditionsByDieaseId(characterList,uid,username,nodeid);
+//        CategoryEntity mustContainNode = getBelongType(nodeData, new ArrayList<CategoryEntity>());
+//        // 查询考虑疾病的宽表数据
+        //List<LinkedHashMap<String,Object>> diseaseData = tableDataMapper.getAllTableData("merge"); // 传递表名参数
+        List<LinkedHashMap<String,Object>> diseaseData = res;
+//        System.out.println("考虑疾病所有数据");
+//        // 合并考虑疾病和非考虑疾病的所有数据
+//        for (LinkedHashMap<String, Object> re : res) {
+//            diseaseData.add(re);
+//        }
+        // 创建表头信息 获取宽表字段管理信息
+        List<FieldManagementEntity> fields = fieldManagementService.list(null);
+        // System.out.println("字段长度为："+fields.size());
+        HashMap<String, String> fieldMap = new HashMap<>();
+        for (FieldManagementEntity field : fields) {
+            fieldMap.put(field.getFeatureName(),field.getUnit());
+        }
+        // TODO 创建表头信息
+        tableDataMapper.createTableByField(tableName,fieldMap);
+        // TODO 数据保存 批量插入
+        // TODO 保证value值数量与字段个数一致
+        for (Map<String, Object> diseaseDatum : diseaseData) {
+            for (FieldManagementEntity field : fields) {
+                if(diseaseDatum.get(field.getFeatureName())==null)
+                {
+                    diseaseDatum.put(field.getFeatureName(),"");
+                }
+            }
+//            System.out.println("数据长度为："+diseaseDatum.size());
+        }
+        System.out.println("========================================");
+        System.out.println("数据长度："+diseaseData.size());
+        // TODO 分批插入 防止sql参数传入过多导致溢出
+        if(diseaseData.size()>200){
+            int batch = diseaseData.size()/200;
+            for(int i=0; i<batch; i++){
+                int start = i*200, end = (i+1)*200;
+                System.out.println("插入第"+i+"轮数据");
+                tableDataMapper.bachInsertData(diseaseData.subList(start,end),tableName); // diseaseData.subList(start,end) 前闭后开
+            }
+            tableDataMapper.bachInsertData(diseaseData.subList(batch*200,diseaseData.size()),tableName);
+        }else{
+            tableDataMapper.bachInsertData(diseaseData,tableName);
+        }
+        // 目录信息
+        CategoryEntity node = new CategoryEntity();
+        node.setIsDelete(0);
+        node.setParentId(nodeData.getId());
+        node.setIsLeafs(1);
+        node.setStatus(status);
+        node.setUid(uid);
+        node.setUsername(username);
+        node.setCatLevel(nodeData.getCatLevel()+1);
+        node.setLabel(tableName);
+        node.setIs_filter(IsFilter);
+        System.out.println(uid_list);
+        node.setIs_upload(IsUpload);
+        node.setUidList(uid_list);
+        System.out.println(node);
+        categoryMapper.insert(node); // 保存目录信息
+
+        // 表描述信息
+        TableDescribeEntity tableDescribeEntity = new TableDescribeEntity();
+        tableDescribeEntity.setTableName(tableName);
+        tableDescribeEntity.setCreateUser(node.getUsername());
+//        tableDescribeEntity.setUid(Integer.parseInt(uid));
+        tableDescribeEntity.setUid(UserThreadLocal.get().getUid());
+        tableDescribeEntity.setTableStatus(node.getStatus());
+        tableDescribeEntity.setCreateUser(username);
+        tableDescribeEntity.setCreateTime(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
+        tableDescribeEntity.setClassPath(nodeData.getLabel()+"/"+tableName);
+        tableDescribeEntity.setTableId(node.getId());
+        tableDescribeEntity.setTableSize(0.0f);
+        // 保存表描述信息
+        tableDescribeMapper.insert(tableDescribeEntity);
+
+    }
+
+    @Override
+    public List<LinkedHashMap<String, Object>> getFilterDataByConditionsByDieaseId(List<CreateTableFeatureVo> characterList, String uid, String username, String nodeid) {
+        System.out.println("历史数据筛选参数：nodeId "+nodeid +"  uid "+uid+"  username "+username);
+
+        List<CategoryEntity> categoryEntities = categoryMapper.selectList(null); // 查询所有的目录信息
+        CategoryEntity nodeData = categoryMapper.selectById(nodeid);
+        // 找到所有的宽表节点
+        List<CategoryEntity> allWideTableNodes = categoryEntities.stream().collect(Collectors.toList());
+        // 遍历当前节点的所有叶子节点，找到这个宽表节点
+        ArrayList<CategoryEntity> leafNodes = new ArrayList<>();
+//        getLeafNode(nodeData, leafNodes);
+        /** 找到所有的非考虑疾病的宽表节点 **/
+        List<CategoryEntity> otherWideTable = null;
+        if(leafNodes!=null && leafNodes.size()>0){
+        }else{
+            otherWideTable = allWideTableNodes;
+        }
+        if(otherWideTable==null) otherWideTable = allWideTableNodes;
+        // 筛选所有非考虑疾病的宽表数据
+        /** select * from ${tableName} where ${feature} ${computeOpt} ${value} ${connector} ... **/
+        // 前端传过来的 AND OR NOT 是数字形式0,1,2，需要变成字符串拼接sql
+        for (CreateTableFeatureVo createTableFeatureVo : characterList) {
+            if(createTableFeatureVo.getOpt()==null) createTableFeatureVo.setOptString("");
+            else if(createTableFeatureVo.getOpt()==0) createTableFeatureVo.setOptString("AND");
+            else if(createTableFeatureVo.getOpt()==1) createTableFeatureVo.setOptString("OR");
+            else createTableFeatureVo.setOptString("AND NOT");
+        }
+        // 处理varchar类型的数据
+        for (CreateTableFeatureVo createTableFeatureVo : characterList) {
+            if(createTableFeatureVo.getType()==null || createTableFeatureVo.getType().equals("character varying")){
+                createTableFeatureVo.setValue("'"+createTableFeatureVo.getValue()+"'");
+            }
+        }
+        List<List<LinkedHashMap<String, Object>>> otherWideTableData = new ArrayList<>();
+        ArrayList<LinkedHashMap<String, Object>> res = new ArrayList<>();
+        otherWideTableData.add(tableDataMapper.getFilterData("merge",characterList));
+        ArrayList<LinkedHashMap<String, Object>> res2 = new ArrayList<>();
+        for (List<LinkedHashMap<String, Object>> otherWideTableDatum : otherWideTableData) {
+            for (LinkedHashMap<String, Object> rowData : otherWideTableDatum) {
+                res.add(rowData);
+            }
+        }
+        // 插入 filter_data_info 表信息
+        FilterDataInfo filterDataInfo = new FilterDataInfo();
+//        filterDataInfo.setUid(Integer.parseInt(uid));
+        filterDataInfo.setUid(UserThreadLocal.get().getUid());
+        filterDataInfo.setCreateUser(username);
+        filterDataInfo.setUsername(username);
+        filterDataInfo.setCateId(nodeData.getId());
+        filterDataInfo.setParentId(nodeData.getParentId());
+        filterDataInfo.setFilterTime(new Timestamp(System.currentTimeMillis())); // 时间
+        filterDataInfoMapper.insert(filterDataInfo);
+
+
+        ArrayList<FilterDataCol> filterDataCols = new ArrayList<>();
+        for (CreateTableFeatureVo createTableFeatureVo : characterList) {
+            FilterDataCol filterDataCol = new FilterDataCol();
+            BeanUtils.copyProperties(createTableFeatureVo,filterDataCol);
+            filterDataCol.setFilterDataInfoId(filterDataInfo.getId());
+            FieldManagementEntity fieldManagementEntity = fieldManagementService.getOne(new QueryWrapper<FieldManagementEntity>().eq("feature_name", createTableFeatureVo.getFeatureName()));
+            filterDataCol.setRange(fieldManagementEntity.getRange());
+            filterDataColMapper.insert(filterDataCol);
+        }
+        return res;
+    }
+
+
+    @Override
+    public List<Map<String, Object>> getInfoByTableName(String tableName) {
+        return tableDataMapper.getInfoByTableName(tableName);
+    }
+
+
 }
+
+
+
+
+

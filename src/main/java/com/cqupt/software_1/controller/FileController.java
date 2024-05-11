@@ -69,8 +69,6 @@ public class FileController {
         // 将其导入到mysql
         String tableName = file.getOriginalFilename();
         tableService.saveCSV2MySQL(remotePath,tableName.substring(0, tableName.indexOf(".")));
-
-        System.out.println("上传文件。。。。。。。。。。。。。");
         // 更新table_info 表
         tableService.insertTableInfo(tableName);
         return new R<>(200 , "成功" , ExecState.SUCCESS);

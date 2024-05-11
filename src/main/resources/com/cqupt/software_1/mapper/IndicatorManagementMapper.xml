@@ -27,4 +27,15 @@
            COUNT("${checkedFeat.featureName}") as valid_count
          FROM "${tableName}"
     </select>
+    <select id="getTableFeilds" resultType="java.util.Map">
+        SELECT COLUMN_NAME, DATA_TYPE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = #{tableName}
+    </select>
+    <select id="getFiledCount" resultType="java.util.Map">
+        SELECT count(DISTINCT("${tableField}")) as num1, COUNT("${tableField}") as num2 from "${tableName}" WHERE "${tableField}" is not NULL
+    </select>
+    <select id="getColType" resultType="java.lang.String">
+        SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' and COLUMN_NAME='${featureName}'
+    </select>
 </mapper>

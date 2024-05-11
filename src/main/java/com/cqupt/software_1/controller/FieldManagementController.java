@@ -28,7 +28,6 @@ public class FieldManagementController {
      */
     @PostMapping("/getAllFiled")
     public R getAllFiled(@RequestBody QueryFiledVO queryFiledVO){
-        System.out.println(queryFiledVO.getDiseaseName());
         List<FieldManagementEntity> res = fieldManagementService.getFiledByDiseaseName(queryFiledVO.getDiseaseName());
         return R.success(res);
     }
@@ -51,14 +50,12 @@ public class FieldManagementController {
     // 根据表名获取所有字段
     @GetMapping("/getAllFieldsByTableName")
     public R getAllFieldsByTableName(@RequestParam("tableName") String tableName){
-        System.out.println("tableName: "+tableName);
 //        List<FieldManagementEntity> list = fieldManagementService.list(new QueryWrapper<FieldManagementEntity>().eq("table_name", "copd"));// TODO 字段管理表没有完善 先写死的
         List<FieldManagementEntity> list = fieldManagementService.list(null);
         List<String> featureList = list.stream().map(fieldManagementEntity -> {
             return fieldManagementEntity.getFeatureName();
 //            return fieldManagementEntity.getChName();
         }).collect(Collectors.toList());
-        System.out.println("列表数据有："+featureList);
         return R.success("200",featureList);
     }
 

@@ -25,14 +25,11 @@ public class IndicatorManagementController {
 
     @GetMapping("/getIndicators")
     private R<List<IndicatorManageEntity>> getIndicators(@RequestParam("types") List<String> types, @RequestParam("tableName") String tableName){
-        System.out.println("types:"+types);
         List<IndicatorManageEntity> list = indicatorManagementService.getIndicators(types,tableName);
-        System.out.println("feature:"+list);
         return R.success("200",list);
     }
     @PostMapping("/getIndicatorsInfo")
     public R<List<IndicatorsMissDataVo>> getIndicatorsInfo(@RequestBody IndicatorsMissDataVos indicatorsMissDataVos){
-        System.out.println("參數："+JSON.toJSONString(indicatorsMissDataVos));
         List<IndicatorsMissDataVo> list = indicatorManagementService.getIndicatorsInfo(indicatorsMissDataVos.getCheckedFeats(),indicatorsMissDataVos.getTableName());
         return R.success("200",list);
     }
@@ -40,7 +37,6 @@ public class IndicatorManagementController {
     // 跟据不同的算法进行数据补齐
     @PostMapping("/fillData")
     public R fillData(@RequestBody DataFillMethodVo dataFillMethodVo) {
-        System.out.println("插补参数为："+dataFillMethodVo);
         List<Map<String, IsFillVo>> list = indicatorManagementService.fillData(dataFillMethodVo);
         return R.success("200", list);
     }

@@ -36,7 +36,6 @@ public class FeatureControllerPublic {
     // TODO 废弃方法
     @PostMapping("/insertFeature") // 上传特征分类结果
     public R fieldInsert(@RequestBody FeatureListVo featureListVo){
-        System.out.println("tableHeaders:"+ JSON.toJSONString(featureListVo));
 
         featureManageService.insertFeatures(featureListVo);
         return null;

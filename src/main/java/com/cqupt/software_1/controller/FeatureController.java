@@ -236,7 +236,6 @@ public class FeatureController {
 
     @PostMapping("/runAi")
     public RunPyR runAi(@RequestBody RunPyEntity runPyEntity) throws URISyntaxException, IOException {
-        System.out.println("RunPyEntit"+JSON.toJSONString(runPyEntity));
         // 算法服务地址
         String baseUri = "http://localhost:5000/";
         // 运行哪个算法就是哪个路径

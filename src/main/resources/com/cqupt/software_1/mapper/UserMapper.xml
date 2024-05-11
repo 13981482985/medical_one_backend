@@ -18,12 +18,58 @@
         create_time,update_time,is_deleted
     </sql>
     <insert id="saveUser" parameterType="com.cqupt.software_1.entity.User">
-        INSERT INTO "user"  ("uid","username", "password", "create_time",  "role" )  VALUES  ('${user.uid}','${user.username}', '${user.password}', '${user.createTime}','${user.role}')
+        INSERT INTO "user"  ("uid","username", "password", "create_time",  "role", "user_status", "answer_1" , "answer_2", "answer_3" , "upload_size" )
+        VALUES  ('${user.uid}','${user.username}', '${user.password}',
+                 '${user.createTime}','${user.role}','${user.userStatus}','${user.answer1}','${user.answer2}','${user.answer3}','${user.uploadSize}')
     </insert>
+    <insert id="insertUser" >
+        INSERT INTO "user" ( username, password, create_time, update_time, role,  user_status)
+        VALUES ( #{username}, #{password}, #{createTime}, #{updateTime}, #{role}, #{userStatus});
+
+    </insert>
+    <update id="updateStatusById">
+
+update  "user" set user_status = ${status}   , role = ${role}   , upload_size = ${uploadSize} where uid = ${uid}
+
+
+    </update>
+    <update id="removeUserById">
+
+        DELETE FROM "user" WHERE uid= ${uid}
+    </update>
+    <update id="updatePwd">
+        update  "user" set password = '${password}'  where username = '${username}'
+    </update>
+
+    <select id="countUsers" resultType="int">
+        SELECT COUNT(*) FROM "user"
+    </select>
     <select id="getUerByUserName" resultType="com.cqupt.software_1.entity.User">
         select * from "user" where "username" = '${userName}'
     </select>
     <select id="getUserById" resultType="com.cqupt.software_1.entity.User">
         select * from "user" where "uid"='${id}';
+    </select>
+    <select id="getAllUserInfo" resultType="com.cqupt.software_1.entity.User">
+        SELECT uid , username,  role, create_time, update_time, user_status
+        FROM "user";
+    </select>
+    <select id="selectUserPage" resultType="com.cqupt.software_1.entity.User">
+        SELECT * FROM "user" LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+
+
+    <update id="addTableSize">
+        update "user"  set upload_size = upload_size + ${tableSize} where uid = #{uid}
+    </update>
+
+    <update id="minusTableSize">
+        update "user"  set upload_size = upload_size - ${tableSize} where uid = #{uid}
+    </update>
+
+    <!--  User selectByUid(String uid); -->
+    <select id="selectByUid" resultType="com.cqupt.software_1.entity.User">
+        select * from "user" where uid = #{uid}
     </select>
 </mapper>

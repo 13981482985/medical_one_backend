@@ -1,6 +1,5 @@
 package com.cqupt.software_1.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -22,11 +21,8 @@ public class FieldManagementEntity {
     private String chName;
     private Boolean diseaseStandard;
 
-//    @TableField(value = "population")
     private Boolean population;
-//    @TableField(value = "society")
     private Boolean society;
-//    @TableField(value = "physiology")
     private Boolean physiology;
 
     private String tableName;

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cqupt.software_1.mapper.NoticeMapper">
+    <update id="saveNotification">
+
+        INSERT INTO public.notification (uid, username, title, content , create_time, update_time)
+        VALUES (${uid},'${username}','${title}','${content}',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+
+    </update>
+
+
+    <select id="selectAllNotices" resultType="com.cqupt.software_1.entity.Notification">
+            SELECT * FROM public.notification
+    </select>
+</mapper>

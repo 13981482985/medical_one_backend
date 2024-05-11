@@ -56,7 +56,6 @@ public class IndexController {
     public R<List<TableManager>> getAllData(){
 
         List<TableManager> tableList = tableManagerService.getAllData();
-        System.err.println("是否是空值："+tableList);
         // 去重
         tableList = tableList.stream().collect(Collectors.collectingAndThen(
                 Collectors.toCollection(

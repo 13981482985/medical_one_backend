@@ -3,6 +3,7 @@ package com.cqupt.software_1.vo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.core.ReactiveAdapterRegistry;
 
 import java.util.List;
 
@@ -14,4 +15,14 @@ public class AddDataFormVo {
     private String dataName;
     private String createUser;
     private List<CreateTableFeatureVo> characterList;
+
+
+    // 新增
+    private String uid;
+    private String username;
+
+    private String isFilter;
+    private String isUpload;
+    private String uid_list;
+
 }
