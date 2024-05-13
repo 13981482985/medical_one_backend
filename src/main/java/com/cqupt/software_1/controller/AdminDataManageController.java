@@ -200,10 +200,11 @@ public class AdminDataManageController {
 //            String tableId="";
             // 管理员端-数据管理新更改
 //            传入的是category的id集合，根据id获取labels拼接成classpath
-            String classPath = "公共数据集";
+//            String classPath = "公共数据集";
+            String classPath = "";
             for (String id : ids) {
                 CategoryEntity categoryEntity = categoryMapper.selectById(id);
-                classPath += "/" + categoryEntity.getLabel();
+                classPath = categoryEntity.getPath();
             }
             classPath += "/" + tableName;
             List<String> featureList = adminDataManageService.uploadDataTable(file, pid, tableName, userName, classPath, uid, tableStatus, tableSize, current_uid,uid_list);
@@ -309,28 +310,81 @@ public class AdminDataManageController {
         return Result.success("200", ret);
     }
 
+//    @GetMapping("/selectDataById")
+//    public Result<TableDescribeEntity> selectDataById(
+//            @RequestParam("id") String id
+////            @RequestParam("current_uid") String current_uid
+//    ) {
+//        TableDescribeEntity adminDataManage = adminDataManageService.selectDataById(id);
+//
+//        return Result.success("200", adminDataManage);
+//    }
+
+//    @GetMapping("/selectDataById")
+//    public Result<TableDescribeEntity> selectDataById(
+//            @RequestParam("id") String id
+//    ){
+//        TableDescribeEntity adminDataManage = adminDataManageService.selectDataById(id); // 根据id获取table_describe表的那一行
+//        Map<String, Object> ret =  new HashMap<>();
+//        ret.put("object", adminDataManage);
+//
+//        CategoryEntity categoryEntity = categoryMapper.selectById(adminDataManage.getTableId());// 根据id获取table_describe表的table_id与category形成映射
+//        List<String> pids = new ArrayList<>();
+//        while (!categoryEntity.getParentId().equals("1")){ // 筛选除疾病列表结点的下面结点
+//            categoryEntity = categoryMapper.selectById(categoryEntity.getParentId());
+//            pids.add(categoryEntity.getId()); // 迭代添加父节点id
+//        }
+//        Collections.reverse(pids); // 反转，使得父节点id在前面
+//
+//        ret.put("ids", pids); // 包含疾病结点的id，不包含表id
+//        return Result.success("200",ret);
+//    }
     @GetMapping("/selectDataById")
     public Result<TableDescribeEntity> selectDataById(
             @RequestParam("id") String id
-//            @RequestParam("current_uid") String current_uid
-    ) {
-        TableDescribeEntity adminDataManage = adminDataManageService.selectDataById(id);
+    ){
+        TableDescribeEntity adminDataManage = adminDataManageService.selectDataById(id); // 根据id获取table_describe表的那一行
+        Map<String, Object> ret =  new HashMap<>();
+        ret.put("object", adminDataManage);
 
-        return Result.success("200", adminDataManage);
+        CategoryEntity categoryEntity = categoryMapper.selectById(adminDataManage.getTableId());// 根据id获取table_describe表的table_id与category形成映射
+        List<String> pids = new ArrayList<>();
+        while (!categoryEntity.getParentId().equals("1")){ // 筛选除疾病列表结点的下面结点
+            categoryEntity = categoryMapper.selectById(categoryEntity.getParentId());
+            pids.add(categoryEntity.getId()); // 迭代添加父节点id
+        }
+        Collections.reverse(pids); // 反转，使得父节点id在前面
+
+        ret.put("ids", pids); // 包含疾病结点的id，不包含表id
+        return Result.success("200",ret);
     }
 
-    @GetMapping("/updateAdminDataManage")
+//    @PostMapping("/updateAdminDataManage")
+//    public Result<TableDescribeEntity> updateAdminDataManage(
+//            @RequestParam("id") String id,
+//            @RequestParam("tableid") String tableid,
+//            @RequestParam("oldTableName") String oldTableName,
+//            @RequestParam("tableName") String tableName,
+//            @RequestParam("tableStatus") String tableStatus,
+//            @RequestParam("current_uid") String current_uid
+//    ) {
+//        adminDataManageService.updateInfo(id, tableid, oldTableName, tableName, tableStatus, current_uid);
+//
+//        return Result.success("200", "已经更改到数据库");
+//    }
+
+    @PostMapping("/updateAdminDataManage")
     public Result<TableDescribeEntity> updateAdminDataManage(
             @RequestParam("id") String id,
             @RequestParam("tableid") String tableid,
             @RequestParam("oldTableName") String oldTableName,
             @RequestParam("tableName") String tableName,
             @RequestParam("tableStatus") String tableStatus,
+            @RequestParam("pids") String[] pids,  // 父节点id列表
             @RequestParam("current_uid") String current_uid
-    ) {
-        adminDataManageService.updateInfo(id, tableid, oldTableName, tableName, tableStatus, current_uid);
-
-        return Result.success("200", "已经更改到数据库");
+    ){
+        adminDataManageService.updateInfo(id, tableid, oldTableName, tableName, tableStatus, pids, current_uid);
+        return Result.success("200","已经更改到数据库");
     }
 
     @GetMapping("/getLevel2Label")
@@ -529,6 +583,26 @@ public class AdminDataManageController {
         adminDataManageService.updateById(adminDataManage);
         return Result.success(username+"成功下载数据集"+adminDataManage.getTableName()+"并取消下次下载权限","0");
     }
+
+//    @GetMapping("/selectDataById")
+//    public Result<TableDescribeEntity> selectDataById(
+//            @RequestParam("id") String id
+//    ){
+//        TableDescribeEntity adminDataManage = adminDataManageService.selectDataById(id); // 根据id获取table_describe表的那一行
+//        Map<String, Object> ret =  new HashMap<>();
+//        ret.put("object", adminDataManage);
+//
+//        CategoryEntity categoryEntity = categoryMapper.selectById(adminDataManage.getTableId());// 根据id获取table_describe表的table_id与category形成映射
+//        List<String> pids = new ArrayList<>();
+//        while (!categoryEntity.getParentId().equals("1")){ // 筛选除疾病列表结点的下面结点
+//            categoryEntity = categoryMapper.selectById(categoryEntity.getParentId());
+//            pids.add(categoryEntity.getId()); // 迭代添加父节点id
+//        }
+//        Collections.reverse(pids); // 反转，使得父节点id在前面
+//
+//        ret.put("ids", pids); // 包含疾病结点的id，不包含表id
+//        return Result.success("200",ret);
+//    }
 
 }
 

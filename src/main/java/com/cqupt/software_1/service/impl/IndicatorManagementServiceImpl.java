@@ -62,6 +62,7 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
         Collections.sort(fields);
         List<IndicatorManageEntity> list = new ArrayList<>();
         if(tableFields.equals(fields)){ // 这个表字段管理表所管理
+            System.out.println("被字段管理表管理");
             // 跟据中文名称获取值指标类型英文名
             if(types.contains("其他")) types.remove("其他");
             if(types.size() == 0) return null;
@@ -114,6 +115,7 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
             }
             return list;
         }else{  // 没有被字段管理表所管理
+            System.out.println("没有被字段管理表管管理。。");
             if(types.contains("其他")){//只有选中了 “其他”这个指标就显示没有没被字段管理的表字段信息
                 // 查询字段的 类型、缺失率、离散占比（不同的数，以及对总有效数的占比）
                 // 遍历每一个字段
@@ -127,23 +129,29 @@ public class IndicatorManagementServiceImpl implements IndicatorManagementServic
                     Map<String, Long> map  = indicatorManagementMapper.getFiledCount(tableField, tableName);
                     long[] counts = {map.get("num1"),map.get("num2")};
                     if(counts.length==2){
+                        System.out.println("开始设置值");
                         // 获取字段的连续值
                         float missRate = indicatorManagementMapper.getMissRate(tableField, tableName);
                         indicatorManageEntity.setMissRate(missRate);
                         if(counts[0]<=10 && counts[0]>=1){
+                            System.out.println("aaaaaa");
                             if(1.0*counts[0]/counts[1]<0.05) { // 离散
                                 indicatorManageEntity.setDiscrete(true);
                                 indicatorManageEntity.setRangeSize((int)counts[0]);
                                 if(fieldMap.get(tableField).equals("integer") || fieldMap.get(tableField).equals("double precision")){ // 数字类型
+                                    System.out.println("数字连续");
                                     indicatorManageEntity.setFeatureDataType(2);
                                     indicatorManageEntity.setMissCompleteMethod("前向填充");
                                 }else{ // 文本离散
+                                    System.out.println("文本离散");
                                     indicatorManageEntity.setMissCompleteMethod("前向填充");
                                     indicatorManageEntity.setFeatureDataType(3);
                                 }
                             }
                         }else{ // 非离散
+                            System.out.println("bbbb");
                             if(fieldMap.get(tableField).equals("integer") || fieldMap.get(tableField).equals("double precision")) { // 数字类型
+                                System.out.println("数字连续");
                                 indicatorManageEntity.setFeatureDataType(1);
                                 indicatorManageEntity.setMissCompleteMethod("均数替换");
                             }else continue;

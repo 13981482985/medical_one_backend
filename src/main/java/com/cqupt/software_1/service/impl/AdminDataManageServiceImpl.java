@@ -173,11 +173,11 @@ public List<String> storeTableData(MultipartFile file, String tableName) throws 
         categoryEntity.setStatus(tableStatus);
         categoryEntity.setUidList(uid_list);
         categoryEntity.setUsername(userName);
+        categoryEntity.setPath(classPath);
 
         // 杨星 修改  字段类型
         categoryEntity.setIs_upload("1");
         categoryEntity.setIs_filter("0");
-        System.out.println("==categoryEntity==" + categoryEntity );
         categoryMapper.insert(categoryEntity);
         logService.insertLog(current_uid, 0, "在category中增加了"+tableName);
 
@@ -199,7 +199,6 @@ public List<String> storeTableData(MultipartFile file, String tableName) throws 
         List<String> featureList = storeTableData(file, tableName);
         logService.insertLog(current_uid, 0, "在public模式下中创建了"+tableName);
         // 保存数据库
-        System.out.println("表描述信息插入成功, 动态建表成功");
         return featureList;
     }
 
@@ -227,37 +226,71 @@ public List<String> storeTableData(MultipartFile file, String tableName) throws 
         adminDataManageMapper.deleteByTableId(tableId);
     }
 
-    @Override
-    public void updateById(String id, String tableName, String tableStatus) {
-        TableDescribeEntity adminDataManage = adminDataManageMapper.selectById(id);
-        String classPath = adminDataManage.getClassPath();
-        String[] str = classPath.split("/");
-        str[str.length-1] = tableName;
-        classPath = String.join("/", str);
-        adminDataManage.setClassPath(classPath);
-        adminDataManage.setTableName(tableName);
-        adminDataManage.setTableStatus(tableStatus);
-        adminDataManageMapper.updateById(adminDataManage);
-//        adminDataManageMapper.updateById(id, tableName, tableStatus);
-    }
+//    @Override
+//    public void updateById(String id, String tableName, String tableStatus) {
+//        TableDescribeEntity adminDataManage = adminDataManageMapper.selectById(id);
+//        String classPath = adminDataManage.getClassPath();
+//        String[] str = classPath.split("/");
+//        str[str.length-1] = tableName;
+//        classPath = String.join("/", str);
+//        adminDataManage.setClassPath(classPath);
+//        adminDataManage.setTableName(tableName);
+//        adminDataManage.setTableStatus(tableStatus);
+//        adminDataManageMapper.updateById(adminDataManage);
+////        adminDataManageMapper.updateById(id, tableName, tableStatus);
+//    }
 
     @Override
     public void updateDataBaseTableName(String old_name, String new_name){
         adminDataManageMapper.updateDataBaseTableName(old_name, new_name);
     }
 
+//    @Override
+//    @Transactional
+//    public void updateInfo(String id, String tableid, String oldTableName, String tableName, String tableStatus,String[] pids, String current_uid) {
+//        updateById(id, tableName, tableStatus);
+//        logService.insertLog(current_uid, 0, "更改了table_describe表中的"+oldTableName + "表为：" + tableName + ",将状态更改为：" + tableStatus + "并更改了classpath");
+//        categoryMapper.updateTableNameByTableId(tableid, tableName, tableStatus);
+//        logService.insertLog(current_uid, 0, "更改了category表中的"+oldTableName + "表为：" + tableName + ",将状态更改为：" + tableStatus);
+//        if (!oldTableName.equals(tableName)){
+//            updateDataBaseTableName(oldTableName, tableName);
+//            logService.insertLog(current_uid, 0, "更改了数据库中的"+oldTableName + "表为：" + tableName );
+//        }
+//    }
+
     @Override
     @Transactional
-    public void updateInfo(String id, String tableid, String oldTableName, String tableName, String tableStatus, String current_uid) {
-        updateById(id, tableName, tableStatus);
-        logService.insertLog(current_uid, 0, "更改了table_describe表中的"+oldTableName + "表为：" + tableName + ",将状态更改为：" + tableStatus + "并更改了classpath");
+    public void updateInfo(String id, String tableid, String oldTableName, String tableName, String tableStatus,String[] pids, String current_uid) {
+        updateById(id, pids, tableName, tableStatus);
         categoryMapper.updateTableNameByTableId(tableid, tableName, tableStatus);
-        logService.insertLog(current_uid, 0, "更改了category表中的"+oldTableName + "表为：" + tableName + ",将状态更改为：" + tableStatus);
         if (!oldTableName.equals(tableName)){
             updateDataBaseTableName(oldTableName, tableName);
-            logService.insertLog(current_uid, 0, "更改了数据库中的"+oldTableName + "表为：" + tableName );
         }
     }
+
+    @Override
+    public void updateById(String id, String[] pids, String tableName, String tableStatus) {
+        TableDescribeEntity adminDataManage = adminDataManageMapper.selectById(id);  // 在table_describe表中获取表id对应的那一行数据
+
+//        设置class_path
+        String classPath = "";
+        for (String pid : pids){
+            CategoryEntity categoryEntity = categoryMapper.selectById(pid);
+            classPath = categoryEntity.getLabel();
+        }
+        classPath += "/" + tableName;
+
+        adminDataManage.setClassPath(classPath);
+        adminDataManage.setTableName(tableName);
+        adminDataManage.setTableStatus(tableStatus);
+
+        CategoryEntity categoryEntity = categoryMapper.selectById(adminDataManage.getTableId());
+        categoryEntity.setParentId(pids[pids.length-1]);
+        categoryMapper.updateById(categoryEntity); // 更改category表
+        adminDataManageMapper.updateById(adminDataManage);// 更改table_describe表
+    }
+
+
 
 
 }

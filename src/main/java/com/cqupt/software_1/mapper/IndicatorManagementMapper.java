@@ -1,5 +1,6 @@
 package com.cqupt.software_1.mapper;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.cqupt.software_1.entity.IndicatorManageEntity;
 import com.cqupt.software_1.vo.IndicatorsMissDataVo;
 import org.apache.ibatis.annotations.Mapper;
@@ -12,7 +13,7 @@ import java.util.Map;
 public interface IndicatorManagementMapper {
     List<IndicatorManageEntity> getIndicators(@Param("types") List<String> types);
 
-    float getMissRate(String featureName, String tableName);
+    float getMissRate(@Param("featureName") String featureName, @Param("tableName") String tableName);
 
     IndicatorsMissDataVo getMissDataInfo(@Param("checkedFeat") IndicatorManageEntity checkedFeat, @Param("tableName") String tableName);
 

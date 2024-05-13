@@ -22,8 +22,8 @@ public interface AdminDataManageService extends IService<TableDescribeEntity> {
     void deleteByTableName(String tablename);
     void deleteByTableId(String tableId);
 
-    void updateById(String id, String tableName, String tableStatus);
+    void updateById(String id,String[] pids, String tableName, String tableStatus);
     void updateDataBaseTableName(String old_name, String new_name);
 
-    void updateInfo(String id, String tableid, String oldTableName, String tableName, String tableStatus, String current_uid);
+    void updateInfo(String id, String tableid, String oldTableName, String tableName, String tableStatus, String[] pids,String current_uid);
 }

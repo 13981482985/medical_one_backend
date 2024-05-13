@@ -178,10 +178,12 @@ public class TableDataServiceImpl implements TableDataService {
             tableDataMapper.bachInsertData(diseaseData,tableName);
         }
         // 目录信息
+//        System.out.println("节点参数信息："+JSON.toJSONString(nodeData));
+        CategoryEntity cat = categoryMapper.selectById(nodeData.getId());
         CategoryEntity node = new CategoryEntity();
         node.setIsDelete(0);
         node.setParentId(nodeData.getId());
-        node.setPath(nodeData.getPath()+"/"+tableName);
+        node.setPath(cat.getPath()+"/"+tableName);
         node.setIsLeafs(1);
         node.setIsCommon(nodeData.getIsCommon());
         node.setCatLevel(nodeData.getCatLevel()+1);
@@ -189,14 +191,21 @@ public class TableDataServiceImpl implements TableDataService {
         node.setLabel(tableName);
         node.setStatus(nodeData.getStatus());
         node.setUid(UserThreadLocal.get().getUid().toString());
+        node.setUsername(UserThreadLocal.get().getUsername());
+        node.setStatus("0");
+        node.setIsCommon(0);
+        node.setIs_filter("1");
         categoryMapper.insert(node); // 保存目录信息
         // 表描述信息
         TableDescribeEntity tableDescribeEntity = new TableDescribeEntity();
         tableDescribeEntity.setTableName(tableName);
         tableDescribeEntity.setCreateUser(createUser);
         tableDescribeEntity.setCreateTime(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
-        tableDescribeEntity.setClassPath(nodeData.getPath()+"/"+tableName);
+        tableDescribeEntity.setClassPath(cat.getPath()+"/"+tableName);
         tableDescribeEntity.setTableId(node.getId());
+        tableDescribeEntity.setUid(UserThreadLocal.get().getUid());
+        tableDescribeEntity.setTableStatus("0"); // 筛选后默认私有
+
         // 保存表描述信息
         tableDescribeMapper.insert(tableDescribeEntity);
         UserLog userLog = new UserLog(null, UserThreadLocal.get().getUid(),UserThreadLocal.get().getUsername(),new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()),"筛选数据建表");
@@ -393,7 +402,6 @@ public class TableDataServiceImpl implements TableDataService {
         for(int i=0; i<csvData.get(0).length; i++){
             if(dataType[i]==null) dataType[i]="float8";
         }
-        System.out.println("字段类型为："+JSON.toJSONString(dataType));
         return dataType;
     }
 
